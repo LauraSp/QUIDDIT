@@ -19,8 +19,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tclwinbase_QUIDDITversion import *
 import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
-import QUIDDIT_baseline_copy
-import QUIDDIT_main_copy
+import QUIDDIT_baseline
+import QUIDDIT_main
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
@@ -123,12 +123,10 @@ class QUIDDITMain(TclWinBase):
                                    state='disabled', background=STDBG)
 
         self.print_message(self.stats, self.file_count.get())
-        #self.stats['state']='normal'
-        #self.set_entry_text(self.stats, self.file_count.get())
-        #self.stats['state']='disabled'
 
-        for i in range(row+1):
+        for i in range(row):
             self.rowconfigure(i, weight=1, pad=5)
+        self.rowconfigure(row, weight=0, pad=5)
 
         for j in range(6):
             self.columnconfigure(j, weight=1, pad=5)
@@ -172,8 +170,8 @@ class QUIDDITMain(TclWinBase):
                     loading.progress['value'] += 1
                     self.update()
                     self.print_message(self.message,
-                                       'Processing file no. {}: {} \n'.format(str(loading.progress['value']), str(item)))
-                    QUIDDIT_baseline_copy.main(item, self.save_dir)
+                                       'Processing file no. {}: {} \n'.format(str(loading.progress['value']+1), str(item)))
+                    QUIDDIT_baseline.main(item, self.save_dir)
                 loading.destroy()
 
 
@@ -641,9 +639,8 @@ class QUIDDITMain(TclWinBase):
                     with open(self.reviewfile, 'w') as rev_fob:
                         rev_fob.write('Review for sample %s' %(str(self.sample)) + ':\n')
                         rev_fob.write(utility.rev_header+'\n')
-                        self.update()
 
-                curr_res, curr_rev = QUIDDIT_main_copy.main(item, self.age, self.N_comp)
+                curr_res, curr_rev = QUIDDIT_main.main(item, self.age, self.N_comp)
 
                 with open(self.resultfile, 'a') as res_fob:
                     for item in curr_res[0]:
@@ -659,13 +656,15 @@ class QUIDDITMain(TclWinBase):
                 self.review[i] = curr_rev
 
                 self.print_message(self.message,
-                                   'Processing file no. {} of {}: {}'.format(str(loading.progress['value']),
+                                   'Processing file no. {} of {}: {}'.format(str(loading.progress['value']+1),
                                                         loading.progress['maximum'], str(item)))
                 self.print_message(self.message,
                                    'Results for this spectrum:\n{}\n'.format(curr_res))
                 loading.progress['value'] += 1
+                #loading.update()
+                self.update()
                 i += 1
-
+                
             loading.destroy()
 
         else:
@@ -803,8 +802,8 @@ class LoadingFrame(tk.Frame):
     """Creating a frame for a progress bar
     """
     def __init__(self, master, count):
-        tk.Frame.__init__(self, master, borderwidth=5, relief='groove')
-
+        tk.Frame.__init__(self, master, width=50, height=5, borderwidth=5, relief='groove')
+        self.pack()
         tk.Label(self, text="Your files are being processed").pack(padx=15, pady=10)
 
         self.progress = ttk.Progressbar(self, orient='horizontal', length=250, mode='determinate')
