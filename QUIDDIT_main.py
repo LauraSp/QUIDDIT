@@ -118,7 +118,7 @@ def main(arg1, arg2, arg3):
     H_lb = I1405 - .1*I1405
     H_ub = I1405 + .1*I1405
 
-    I1332 = utility.height(1332,pp)
+    I1332 = utility.height(1332, pp)
     if I1332 <= 0:
          B_lb = 0
          B_ub = .5
