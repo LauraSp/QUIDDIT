@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 """
 Created on Thu Sep 07 12:31:42 2017
 
@@ -167,10 +167,10 @@ class QUIDDITMain(TclWinBase):
             if self.save_dir:
                 loading = LoadingFrame(self.master, len(self.selected_files))
                 for item in self.selected_files:
-                    loading.progress['value'] += 1
-                    self.update()
                     self.print_message(self.message,
                                        'Processing file no. {}: {} \n'.format(str(loading.progress['value']+1), str(item)))
+                    loading.progress['value'] += 1
+                    self.update()
                     QUIDDIT_baseline.main(item, self.save_dir)
                 loading.destroy()
 
@@ -319,7 +319,7 @@ class QUIDDITMain(TclWinBase):
 
 
     def plot_ls(self):
-        """Method to plot results of either linescans (mode='1D') or maps (mode='2D').
+        """Method to plot results of linescans.
         """
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
                                            title='Select results file',
