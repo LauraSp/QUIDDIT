@@ -14,7 +14,9 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import matplotlib.cm as cm
+import matplotlib.image as mpimg
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 from tclwinbase_QUIDDITversion import *
 import QUIDDIT_settings as settings
@@ -88,18 +90,21 @@ class QUIDDITMain(TclWinBase):
         row = 0
 
         self.fig = Figure(dpi=100)
+        #self.fig = Figure()
         self.ax = self.fig.add_subplot(111)
         self.fig.gca().invert_xaxis()
         self.fig.suptitle('QUIDDIT')
         self.IIa_spec = np.loadtxt(settings.IIa_path, delimiter=',')
         self.ax.plot(self.IIa_spec[:, 0], self.IIa_spec[:, 1], 'k-')
+        #img = mpimg.imread(r'C:/Users\ls13943\Dropbox\coding\QUIDDIT\QUIDDIT logo.gif')
+        #self.ax.imshow(img)
 
-        self.canvas = self.make_mplcanvas(self.fig, erow=row, ecol=0, cspan=3)
+        self.canvas = self.make_mplcanvas(self.fig, erow=row, ecol=0, cspan=4)
 
         self.message = tk.Text(self, state='disabled', relief=STDRELIEF)
-        self.message.grid(row=row, column=3, columnspan=2, sticky=tk.NSEW, padx=5)
+        self.message.grid(row=row, column=4, columnspan=2, sticky=tk.NSEW, padx=5)
         scrl_bar = tk.Scrollbar(self, command=self.message.yview)
-        scrl_bar.grid(row=row, column=5, sticky=tk.NSEW)
+        scrl_bar.grid(row=row, column=6, sticky=tk.NSEW)
         self.message['yscrollcommand'] = scrl_bar.set
 
         row += 1
@@ -114,11 +119,16 @@ class QUIDDITMain(TclWinBase):
         self.Back_button = self.makebutton(erow=row, ecol=0, caption='Previous',
                                            cmd=lambda s=self: s.plot_seq('prev'),
                                            state='disabled', padx=5, pady=5)
-        self.Next_button = self.makebutton(erow=row, ecol=2, caption='Next',
+        self.Next_button = self.makebutton(erow=row, ecol=3, caption='Next',
                                            cmd=lambda s=self: s.plot_seq('next'),
                                            state='disabled', padx=5, pady=5, sticky='e')
 
-        self.stats = self.maketext(lcol=3, lrow=row, erow=row, ecol=4,
+        self.Histo_button = self.makebutton(erow=row, ecol=2, caption='histogram',
+                                           cmd=self.plot_histo,
+                                           state='disabled', padx=5, pady=5, sticky='e')
+
+
+        self.stats = self.maketext(lcol=4, lrow=row, erow=row, ecol=4,
                                    caption='stats: ', height=2, relief=STDRELIEF,
                                    state='disabled', background=STDBG)
 
@@ -168,7 +178,7 @@ class QUIDDITMain(TclWinBase):
                 loading = LoadingFrame(self.master, len(self.selected_files))
                 for item in self.selected_files:
                     self.print_message(self.message,
-                                       'Processing file no. {}: {} \n'.format(str(loading.progress['value']+1), str(item)))
+                                       'Processing file no. {}: {}\n'.format(str(loading.progress['value']+1), str(item)))
                     loading.progress['value'] += 1
                     self.update()
                     QUIDDIT_baseline.main(item, self.save_dir)
@@ -201,7 +211,7 @@ class QUIDDITMain(TclWinBase):
         """
         """
         print('The user clicked "Ok"')
-        
+
 
     def click_save(self):
         """
@@ -218,7 +228,11 @@ class QUIDDITMain(TclWinBase):
                                                   title='Select spectra (CSV) files to display',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.print_message(self.message,
-                           'Opening the following files:\n{}'.format(self.selected_items))
+                           'Opening the following files:\n')
+        for item in self.selected_items:
+            self.print_message(self.message,
+                               item)
+
         self.file_count.set('{} file(s) selected'.format(len(self.selected_items)))
 
         if self.selected_items:
@@ -233,7 +247,7 @@ class QUIDDITMain(TclWinBase):
 
 
     def hello(self):
-        """for tesing
+        """for testing
         """
         self.print_message(self.message, "Sorry, this doesn't do anything yet")
 
@@ -242,6 +256,7 @@ class QUIDDITMain(TclWinBase):
         """Create and input frame to retrieve user input
         """
         self.toplevel = QUIDDITToplevel('Input')
+        self.toplevel.bind('<Return>', self.toplevel.destroy)
 
         row = 0
         tk.Label(self.toplevel,
@@ -254,6 +269,7 @@ class QUIDDITMain(TclWinBase):
                                                    width=24,
                                                    textvariable=self.namevar)
         self.sample_name.bind('<Tab>', self.on_input)
+        self.sample_name.focus_force()
 
         row += 1
 
@@ -304,7 +320,7 @@ class QUIDDITMain(TclWinBase):
     def loaded(self):
         """Das Window wurde aufgebaut
         """
-        self.print_message(self.message, "Welcome to QUIDDIT ver. 2.0")
+        self.print_message(self.message, 'Welcome to QUIDDIT ver. 2.0\n')
         self.std = settings.std
 
 
@@ -317,6 +333,24 @@ class QUIDDITMain(TclWinBase):
         self.review_name.delete('0', 'end')
         self.review_name.insert('0', inp+' review')
 
+    def plot_histo(self):
+        self.toplevel = QUIDDITToplevel('Histogram')
+        
+        row = 0
+        
+        self.fig = Figure(dpi=100)
+        self.ax = self.fig.add_subplot(111)
+        self.fig.suptitle(self.map_title)
+        self.ax.hist(self.plot_item[~np.isnan(self.plot_item)], bins=100)
+        
+        self.canvas = self.toplevel.make_mplcanvas(self.fig, erow=row, ecol=0)
+        
+        row += 1
+
+        toolbar_frame = tk.Frame(self.toplevel)
+        toolbar_frame.grid(row=row, column=0, sticky=tk.W)
+        self.toolbar = NavigationToolbar2TkAgg(self.canvas, toolbar_frame)
+    
 
     def plot_ls(self):
         """Method to plot results of linescans.
@@ -325,7 +359,7 @@ class QUIDDITMain(TclWinBase):
                                            title='Select results file',
                                            filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.clear_plot(self.fig)
-        self.fig.set_size_inches(8, 7)
+        #self.fig.set_size_inches(8, 7)
         #self.canvas.config(width=8, height=7)
         self.fig.suptitle('')
 
@@ -357,6 +391,7 @@ class QUIDDITMain(TclWinBase):
         self.ax3.set(ylim=(0, None),
                      ylabel='concentration (ppm)',
                      xticklabels=[])
+        self.ax3.legend(loc='best')
 
         self.ax4 = self.fig.add_subplot(3, 3, 5)
         self.ax4.plot(points, (res['[NB]']/(res['[NA]']+res['[NB]'])), 'k.')
@@ -398,15 +433,15 @@ class QUIDDITMain(TclWinBase):
                                            title='Select results file',
                                            filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.selected_items = ('$[N_T]$ (ppm)',
-                    '$[N_A]$ (ppm)',
-                    '$[N_B]$ (ppm)',
-                    '$[N_B]/[N_T]$',
-                    '$T (^{\circ}C)$',
-                    'platelet peak position $(cm^{-1})$',
-                    'platelet peak area $(cm^{-2})$',
-                    'platelet peak width $(cm^{-1})$',
-                    'platelet peak symmetry $(cm^{-1})$',
-                    'I(3107) $(cm^{-2})$')
+                               '$[N_A]$ (ppm)',
+                               '$[N_B]$ (ppm)',
+                               '$[N_B]/[N_T]$',
+                               '$T (^{\circ}C)$',
+                               'platelet peak position $(cm^{-1})$',
+                               'platelet peak area $(cm^{-2})$',
+                               'platelet peak width $(cm^{-1})$',
+                               'platelet peak symmetry $(cm^{-1})$',
+                               'I(3107) $(cm^{-2})$')
         self.plotmode.set('map')
         self.plot_seq('zero')
 
@@ -418,7 +453,7 @@ class QUIDDITMain(TclWinBase):
         plotmode=='map': plot maps
         """
         self.clear_plot(self.fig)
-        
+
         self.Next_button['state'] = 'normal'
         self.Back_button['state'] = 'normal'
 
@@ -449,7 +484,7 @@ class QUIDDITMain(TclWinBase):
                 rev = self.read_review(self.review_path, self.index)
                 spec = np.loadtxt(self.selected_items[self.index], delimiter=',')
 
-                N_abs_new = utility.inter(spec, np.array(self.std[:,0]))
+                N_abs_new = utility.inter(spec, np.array(self.std[:, 0]))
                 c = rev['c']
                 a = rev['a']
                 x = rev['x']
@@ -462,7 +497,7 @@ class QUIDDITMain(TclWinBase):
                 NA = np.round(a * 16.5, 1)
                 NB = np.round(b * 79.4, 1)
                 NT = np.sum(np.nan_to_num((NC, NA, NB)))
-                
+
                 p_spec = utility.spectrum_slice(spec, 1327, 1420)
                 p_wav = p_spec[:, 0]
                 p_params = (rev['p_x0'], rev['p_I'], rev['p_HWHM_l'], rev['p_HWHM_r'], rev['p_sigma'],
@@ -471,7 +506,7 @@ class QUIDDITMain(TclWinBase):
                             rev['psv_c'])
                 p_fit = utility.ultimatepsv_fit(p_wav, *p_params)
                 p_peak_area = np.round(utility.peak_area(*p_params[:5]), 1)
-                
+
                 H_spec = utility.spectrum_slice(spec, 3000, 3200)
                 H_wav = H_spec[:, 0]
                 H_params = (rev['H_pos'], rev['H_I'], rev['H_HWHM_l'], rev['H_HWHM_r'], rev['H_sigma'])
@@ -488,17 +523,16 @@ class QUIDDITMain(TclWinBase):
                                  N_abs_new - N_fit,
                                  'r-', label='misfit')
                     self.ax.set(xlim=(1400, 1000))
-                    
                     self.print_message(self.message,
                                        self.selected_items[self.index])
                     self.print_message(self.message,
-                                       'NC: {} ppm\nNA: {} ppm\nNB: {} ppm\ntotal: {} ppm'. format(NC, NA, NB, NT))
+                                       '\nNC: {} ppm\nNA: {} ppm\nNB: {} ppm\ntotal: {} ppm'.format(NC, NA, NB, NT))
                     self.print_message(self.message,
-                                       'platelet peak area: {} cm-2'.format(p_peak_area))
+                                       'platelet peak area: {0:.2f} cm-2'.format(p_peak_area))
                     self.print_message(self.message,
-                                       'platelet peak position: {} cm-1'.format(rev['p_x0']))
+                                       'platelet peak position: {0:.2f} cm-1'.format(rev['p_x0']))
                     self.print_message(self.message,
-                                       '3107 peak area: {} cm-2\n'.format(H_peak_area))
+                                       '3107 peak area: {0:.2f} cm-2'.format(H_peak_area))
 
                 elif i == 1:
                     self.ax.axhline(y=0, color='0.7', linestyle='--')
@@ -523,6 +557,7 @@ class QUIDDITMain(TclWinBase):
 
 
         elif self.plotmode.get() == 'map':
+            self.Histo_button['state'] = 'normal'
             x = []
             y = []
             res = self.read_results(self.res_file)
@@ -535,7 +570,8 @@ class QUIDDITMain(TclWinBase):
             resolution = 2000j
             cols = cm.jet
 
-            grid_x, grid_y = np.mgrid[extent[0]:extent[1]:resolution, extent[2]:extent[3]:resolution]
+            grid_x, grid_y = np.mgrid[extent[0]:extent[1]:resolution,
+                                      extent[2]:extent[3]:resolution]
 
             maps = {'$[N_T]$ (ppm)': res['[NT]'],
                     '$[N_A]$ (ppm)': res['[NA]'],
@@ -549,40 +585,42 @@ class QUIDDITMain(TclWinBase):
                     'I(3107) $(cm^{-2})$': res['H_area_ana']}
 
             clims = {'$[N_T]$ (ppm)': (None, None),
-                    '$[N_A]$ (ppm)': (None, None),
-                    '$[N_B]$ (ppm)': (None, None),
-                    '$[N_B]/[N_T]$': (0, 1),
-                    '$T (^{\circ}C)$': (1000, 1400),
-                    'platelet peak position $(cm^{-1})$':(1358, 1378),
-                    'platelet peak area $(cm^{-2})$': (None, None),
-                    'platelet peak width $(cm^{-1})$': (None, 25),
-                    'platelet peak symmetry $(cm^{-1})$': (-15, 5),
-                    'I(3107) $(cm^{-2})$': (None, None)}
+                     '$[N_A]$ (ppm)': (None, None),
+                     '$[N_B]$ (ppm)': (None, None),
+                     '$[N_B]/[N_T]$': (0, 1),
+                     '$T (^{\circ}C)$': (1000, 1400),
+                     'platelet peak position $(cm^{-1})$':(1358, 1378),
+                     'platelet peak area $(cm^{-2})$': (None, None),
+                     'platelet peak width $(cm^{-1})$': (None, 25),
+                     'platelet peak symmetry $(cm^{-1})$': (-15, 5),
+                     'I(3107) $(cm^{-2})$': (None, None)}
 
             plots = self.selected_items
 
-            plot_item = maps[plots[self.index]]
-            
+            self.plot_item = maps[plots[self.index]]
+            self.map_title = plots[self.index]
+
             if plots[self.index] == '$[N_B]/[N_T]$':
-                self.ax.set()                          
-            
-            map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, plot_item)
-            self.fig.suptitle(plots[self.index])
+                self.ax.set()
+
+            map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, self.plot_item)
+            self.fig.suptitle(self.map_title)
             self.ax = self.fig.add_subplot(1, 1, 1)
             img = self.ax.imshow(map_grid, origin='lower', extent=extent,
                                  cmap=cols, clim=clims[plots[self.index]])
             divider = make_axes_locatable(self.ax)
             cax = divider.append_axes("right", size="5%", pad=0.3)
-            cbar = self.fig.colorbar(img, cax=cax)
-            #self.toolbar.configure(toolitems=(('Save', 'Save the figure', 'filesave', 'save_figure'),))
+            self.cbar = self.fig.colorbar(img, cax=cax)
 
         else:
             self.print_message(self.message, 'Error: Unknown plotmode.')
 
         self.canvas.draw()
-                      
 
-    def plot_spec(self, file, fig, ax, xlabel='wavenumber ($\mathregular{cm^{-1}}$)', ylabel='absorption', **options):
+
+    def plot_spec(self, file, fig, ax,
+                  xlabel='wavenumber ($\mathregular{cm^{-1}}$)',
+                  ylabel='absorption', **options):
         """plot a single spectrum in fig on axis ax by reading a file
         """
         spectrum = np.loadtxt(file, delimiter=',')
@@ -640,7 +678,21 @@ class QUIDDITMain(TclWinBase):
                         rev_fob.write('Review for sample %s' %(str(self.sample)) + ':\n')
                         rev_fob.write(utility.rev_header+'\n')
 
+                self.print_message(self.message,
+                                   '\nProcessing file no. {} of {}'.format(str(loading.progress['value']+1),
+                                                        loading.progress['maximum']))
+
                 curr_res, curr_rev = QUIDDIT_main.main(item, self.age, self.N_comp)
+                self.print_message(self.message,
+                                   'Results for this spectrum:')
+
+                for index, item in enumerate(zip(curr_res[0], utility.res_header.split(','))):
+                    if index == 0:
+                        self.print_message(self.message,
+                                           '{}: {}'.format(item[1], item[0]))
+                    else:
+                        self.print_message(self.message,
+                                           '{}: {}'.format(item[1], np.round(item[0], 2)))
 
                 with open(self.resultfile, 'a') as res_fob:
                     for item in curr_res[0]:
@@ -655,21 +707,15 @@ class QUIDDITMain(TclWinBase):
                 self.results[i] = curr_res
                 self.review[i] = curr_rev
 
-                self.print_message(self.message,
-                                   'Processing file no. {} of {}: {}'.format(str(loading.progress['value']+1),
-                                                        loading.progress['maximum'], str(item)))
-                self.print_message(self.message,
-                                   'Results for this spectrum:\n{}\n'.format(curr_res))
                 loading.progress['value'] += 1
                 #loading.update()
                 self.update()
                 i += 1
-                
+
             loading.destroy()
 
         else:
             self.print_message(self.message, 'What do you want me to do?')
-            
 
         self.set_defaults()
         curr_res, curr_rev = [], []
@@ -705,7 +751,7 @@ class QUIDDITMain(TclWinBase):
                                               filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         if self.review_path:
             self.selected_items = fd.askopenfilenames(parent=self, initialdir=self.home,
-                                                      title='Select  corresponding corrected spectra (CSV)',
+                                                      title='Select corresponding corrected spectra (CSV)',
                                                       filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
             if self.selected_items:
                 self.plotmode.set('review')
@@ -792,7 +838,7 @@ class QUIDDITToplevel(tk.Toplevel, TclWinBase):
     """Making a toplevel window that inherits from TclWinBase
     """
     def __init__(self, title):
-        super().__init__()
+        #super().__init__()
         self.toplevel = tk.Toplevel()
         self.toplevel.title(title)
         self.protocol("WM_DELETE_WINDOW", self.toplevel.destroy)
@@ -804,7 +850,7 @@ class LoadingFrame(tk.Frame):
     def __init__(self, master, count):
         tk.Frame.__init__(self, master, width=50, height=5, borderwidth=5, relief='groove')
         self.pack()
-        tk.Label(self, text="Your files are being processed").pack(padx=15, pady=10)
+        tk.Label(self, text="Processing...").pack(padx=15, pady=10)
 
         self.progress = ttk.Progressbar(self, orient='horizontal', length=250, mode='determinate')
         self.progress.pack(padx=15, pady=10)
@@ -813,6 +859,8 @@ class LoadingFrame(tk.Frame):
 
 
 class CustomToolbar(NavigationToolbar2TkAgg):
+    """Creating a custom toolbar to be used with tkAgg
+    """
     toolitems = filter(lambda x: x[0] != "Subplots", NavigationToolbar2TkAgg.toolitems)
 
 

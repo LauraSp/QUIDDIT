@@ -144,7 +144,7 @@ def main(arg1, arg2, arg3):
     cons = ({'type': 'ineq', 'fun': utility.pp_cons1}, {'type': 'ineq', 'fun': utility.pp_cons2}, {'type': 'ineq', 'fun': utility.pp_cons3})    
 
     pp_res = op.minimize(utility.ultimatepsv, x0=psv_x0, args=(pp_wav_inter, pp_inter), method='SLSQP', bounds=p_bounds, constraints=cons)
-    pp_fit = utility.ultimatepsv_fit(pp_wav_inter, *pp_res.x)                        
+    #pp_fit = utility.ultimatepsv_fit(pp_wav_inter, *pp_res.x)                        
     
     if pp_res.success != True:
         print('trying alternative method for fitting platelet peak')
@@ -304,7 +304,7 @@ def main(arg1, arg2, arg3):
         
         polyx0 = N_area[-1,1]    
         if polyx0 >0:        
-            polybounds = (0., 0.)    
+            polybounds = (0., polyx0)    
         else:
             polybounds = (polyx0, 0.)
     else:
@@ -421,6 +421,7 @@ def main(arg1, arg2, arg3):
     results['x'] = x       
     results['b'] = b         
     results['d'] = d
+    results['N_poly'] = N_poly
     results['[NC]'] = NC
     results['[NA]'] = NA        
     results['[NB]'] = NB                 
