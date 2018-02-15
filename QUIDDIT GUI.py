@@ -123,7 +123,7 @@ class QUIDDITMain(TclWinBase):
                                            cmd=lambda s=self: s.plot_seq('next'),
                                            state='disabled', padx=5, pady=5, sticky='e')
 
-        self.Histo_button = self.makebutton(erow=row, ecol=2, caption='histogram',
+        self.Histo_button = self.makebutton(erow=row, ecol=2, caption='Histogram',
                                            cmd=self.plot_histo,
                                            state='disabled', padx=5, pady=5, sticky='e')
 
@@ -343,12 +343,25 @@ class QUIDDITMain(TclWinBase):
         self.fig.suptitle(self.map_title)
         self.ax.hist(self.plot_item[~np.isnan(self.plot_item)], bins=100)
         
-        self.canvas = self.toplevel.make_mplcanvas(self.fig, erow=row, ecol=0)
-        
+        self.canvas = self.toplevel.make_mplcanvas(self.fig, erow=row, ecol=0,
+                                                   rspan=2)
+
+        self.min = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
+                                          caption='min')
+
         row += 1
 
+        self.max = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
+                                          caption='max')
+
+        row += 1
+
+        self.toplevel.makebutton(erow=row, ecol=1, cspan=2,
+                                 padx=5, pady=5, sticky='nsew',
+                                 caption='Redo map', cmd=self.hello)
+
         toolbar_frame = tk.Frame(self.toplevel)
-        toolbar_frame.grid(row=row, column=0, sticky=tk.W)
+        toolbar_frame.grid(row=row, column=0, sticky=tk.W, columnspan=3)
         self.toolbar = NavigationToolbar2TkAgg(self.canvas, toolbar_frame)
     
 
@@ -838,9 +851,9 @@ class QUIDDITToplevel(tk.Toplevel, TclWinBase):
     """Making a toplevel window that inherits from TclWinBase
     """
     def __init__(self, title):
-        #super().__init__()
+        super().__init__()
         self.toplevel = tk.Toplevel()
-        self.toplevel.title(title)
+        #self.toplevel.title(title)
         self.protocol("WM_DELETE_WINDOW", self.toplevel.destroy)
 
 
