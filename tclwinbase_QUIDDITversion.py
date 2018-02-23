@@ -213,6 +213,12 @@ class ValidateDoubleEntry():
             return True
 
         return False
+    
+    def delete(self, start, end):
+        self.entry.delete(start, end)
+
+    def bind(self, event, command):
+        self.entry.bind(event, command)
 
 
 class ValidateIntegerEntry():

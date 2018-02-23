@@ -26,6 +26,7 @@ import QUIDDIT_main
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
+STDCOLS = cm.jet
 
 all_toolitems = ('Home', 'Back', 'Forward', None,
                  'Pan', 'Zoom', 'Subplots', None,
@@ -74,7 +75,7 @@ class QUIDDITMain(TclWinBase):
 
         plotmenuopt = {'Plot single spectra':self.file_open,
                        'Plot line data':self.plot_ls,
-                       'Plot map data':self.plot_map}
+                       'Plot map data':self.ask_map}
         self.make_menu(menubar, 'Plot', plotmenuopt)
 
         helpmenuopt = {'Read Manual':(lambda s=self: webbrowser.open(s.github_url)),
@@ -89,17 +90,16 @@ class QUIDDITMain(TclWinBase):
 
         row = 0
 
-        self.fig = Figure(dpi=100)
-        #self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        self.fig.gca().invert_xaxis()
-        self.fig.suptitle('QUIDDIT')
+        self.main_fig = Figure(dpi=100)
+        self.ax = self.main_fig.add_subplot(111)
+        self.main_fig.gca().invert_xaxis()
+        self.main_fig.suptitle('QUIDDIT')
         self.IIa_spec = np.loadtxt(settings.IIa_path, delimiter=',')
         self.ax.plot(self.IIa_spec[:, 0], self.IIa_spec[:, 1], 'k-')
         #img = mpimg.imread(r'C:/Users\ls13943\Dropbox\coding\QUIDDIT\QUIDDIT logo.gif')
         #self.ax.imshow(img)
 
-        self.canvas = self.make_mplcanvas(self.fig, erow=row, ecol=0, cspan=4)
+        self.main_canvas = self.make_mplcanvas(self.main_fig, erow=row, ecol=0, cspan=4)
 
         self.message = tk.Text(self, state='disabled', relief=STDRELIEF)
         self.message.grid(row=row, column=4, columnspan=2, sticky=tk.NSEW, padx=5)
@@ -111,8 +111,8 @@ class QUIDDITMain(TclWinBase):
 
         toolbar_frame = tk.Frame(self)
         toolbar_frame.grid(row=row, column=1, sticky=tk.W)
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, toolbar_frame)
-        #self.toolbar = CustomToolbar(self.canvas, toolbar_frame)
+        self.toolbar = NavigationToolbar2TkAgg(self.main_canvas, toolbar_frame)
+        #self.toolbar = CustomToolbar(self.main_canvas, toolbar_frame)
 
         self.position = 0
 
@@ -124,7 +124,7 @@ class QUIDDITMain(TclWinBase):
                                            state='disabled', padx=5, pady=5, sticky='e')
 
         self.Histo_button = self.makebutton(erow=row, ecol=2, caption='Histogram',
-                                           cmd=self.plot_histo,
+                                           cmd=self.histo_frame,
                                            state='disabled', padx=5, pady=5, sticky='e')
 
 
@@ -252,6 +252,46 @@ class QUIDDITMain(TclWinBase):
         self.print_message(self.message, "Sorry, this doesn't do anything yet")
 
 
+    def histo_frame(self):
+        row = 0
+
+        self.toplevel = QUIDDITToplevel('Histogram')
+
+        self.histo_fig = Figure(dpi=100)
+        self.histo_ax = self.histo_fig.add_subplot(111)
+        self.histo_ax.hist(self.plot_item[~np.isnan(self.plot_item)], bins=100)
+        self.histo_fig.suptitle(self.map_title)
+        self.histo_canvas = self.toplevel.make_mplcanvas(self.histo_fig, erow=row, ecol=0,
+                                                   rspan=3)
+
+        tk.Label(self.toplevel, text='Change min/max values for map').grid(row=row, padx=5, pady=5, column=1, columnspan=2)
+
+        row += 1
+        self.min = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
+                                          caption='min',
+                                          textvariable=self.minvar)
+
+        row += 1
+        self.max = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
+                                          caption='max',
+                                          textvariable = self.maxvar)
+
+        row += 1
+        self.toplevel.makebutton(erow=row, ecol=1, cspan=2,
+                                 padx=5, pady=5, sticky=tk.NSEW,
+                                 caption='Redo map',
+                                 cmd=lambda s=self: s.redo_map(self.map_grid,
+                                                               self.map_title,
+                                                               self.histo_canvas,
+                                                               self.histo_fig,
+                                                               self.histo_ax,
+                                                               self.extent))
+
+        toolbar_frame = tk.Frame(self.toplevel)
+        toolbar_frame.grid(row=row, column=0)
+        self.toolbar = NavigationToolbar2TkAgg(self.histo_canvas, toolbar_frame)
+        
+
     def input_frame(self):
         """Create and input frame to retrieve user input
         """
@@ -333,37 +373,6 @@ class QUIDDITMain(TclWinBase):
         self.review_name.delete('0', 'end')
         self.review_name.insert('0', inp+' review')
 
-    def plot_histo(self):
-        self.toplevel = QUIDDITToplevel('Histogram')
-        
-        row = 0
-        
-        self.fig = Figure(dpi=100)
-        self.ax = self.fig.add_subplot(111)
-        self.fig.suptitle(self.map_title)
-        self.ax.hist(self.plot_item[~np.isnan(self.plot_item)], bins=100)
-        
-        self.canvas = self.toplevel.make_mplcanvas(self.fig, erow=row, ecol=0,
-                                                   rspan=2)
-
-        self.min = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
-                                          caption='min')
-
-        row += 1
-
-        self.max = self.toplevel.make_double_entry(lcol=1, lrow=row, ecol=2, erow=row,
-                                          caption='max')
-
-        row += 1
-
-        self.toplevel.makebutton(erow=row, ecol=1, cspan=2,
-                                 padx=5, pady=5, sticky='nsew',
-                                 caption='Redo map', cmd=self.hello)
-
-        toolbar_frame = tk.Frame(self.toplevel)
-        toolbar_frame.grid(row=row, column=0, sticky=tk.W, columnspan=3)
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, toolbar_frame)
-    
 
     def plot_ls(self):
         """Method to plot results of linescans.
@@ -371,33 +380,31 @@ class QUIDDITMain(TclWinBase):
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
                                            title='Select results file',
                                            filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
-        self.clear_plot(self.fig)
-        #self.fig.set_size_inches(8, 7)
-        #self.canvas.config(width=8, height=7)
-        self.fig.suptitle('')
+        self.clear_plot(self.main_fig)
+        self.mainfig.suptitle('')
 
         res = np.loadtxt(self.res_file, delimiter=',', dtype=utility.results_dtype, skiprows=2)
         points = []
         for item in res['name']:
             points.append(float(item.split()[-1][-8:-4]))
 
-        self.ax0 = self.fig.add_subplot(3, 3, 1)
+        self.ax0 = self.main_fig.add_subplot(3, 3, 1)
         self.ax0.text(0, 0.5, self.res_file.split('/')[-1], bbox={'facecolor':'white', 'pad':10})
         self.ax0.axis('off')
 
-        self.ax1 = self.fig.add_subplot(3, 3, 2)
+        self.ax1 = self.main_fig.add_subplot(3, 3, 2)
         self.ax1.plot(res['[NB]']/79.4, res['p_area_ana'], 'k.')
         self.ax1.plot((0, 100), (0, 6400), 'k-')
         self.ax1.set(xlim=(0, 10), ylim=(0, 640),
                      xlabel='$\mathregular{\mu_B}$', ylabel="I(B') $\mathregular{(cm^{-2})}$")
 
-        self.ax2 = self.fig.add_subplot(3, 3, 3)
+        self.ax2 = self.main_fig.add_subplot(3, 3, 3)
         self.ax2.plot(points, res['H_area_ana'], 'k.')
         self.ax2.set(ylim=(0, None),
                      ylabel='I(3107) $\mathregular{(cm^{-2})}$',
                      xticklabels=[])
 
-        self.ax3 = self.fig.add_subplot(3, 3, 4)
+        self.ax3 = self.main_fig.add_subplot(3, 3, 4)
         self.ax3.plot(points, res['[NA]'], '.', label='$\mathregular{[N_A]}$')
         self.ax3.plot(points, res['[NB]'], '.', label='$\mathregular{[N_B]}$')
         self.ax3.plot(points, res['[NT]'], '.', label='$\mathregular{[N_t]}$')
@@ -406,42 +413,42 @@ class QUIDDITMain(TclWinBase):
                      xticklabels=[])
         self.ax3.legend(loc='best')
 
-        self.ax4 = self.fig.add_subplot(3, 3, 5)
+        self.ax4 = self.main_fig.add_subplot(3, 3, 5)
         self.ax4.plot(points, (res['[NB]']/(res['[NA]']+res['[NB]'])), 'k.')
         self.ax4.set(ylim=(0, 1),
                      ylabel='$\mathregular{[N_B]/[N_T]}$',
                      xticklabels=[])
 
-        self.ax5 = self.fig.add_subplot(3, 3, 6)
+        self.ax5 = self.main_fig.add_subplot(3, 3, 6)
         self.ax5.plot(points, res['T'], 'k.')
         self.ax5.set(ylim=(1050, 1350),
                      ylabel='$\mathregular{T_N (^{\circ}C)}$',
                      xticklabels=[])
 
-        self.ax6 = self.fig.add_subplot(3, 3, 7)
+        self.ax6 = self.main_fig.add_subplot(3, 3, 7)
         self.ax6.plot(points, res['p_area_ana'], 'k.')
         self.ax6.set(ylim=(0, None),
                      xlabel='#', ylabel="I(B') $\mathregular{(cm^{-2})}$")
 
-        self.ax7 = self.fig.add_subplot(3, 3, 8)
+        self.ax7 = self.main_fig.add_subplot(3, 3, 8)
         P0 = (res['[NB]']/79.4)*64
         deg = (1-(res['p_area_ana']/P0))
         self.ax7.plot(points, deg, 'k.')
         self.ax7.set(ylim=(0, 1),
                      xlabel='#', ylabel="$\mathregular{1-(I(B')/I(B')_0)}$")
 
-        self.ax8 = self.fig.add_subplot(3, 3, 9)
+        self.ax8 = self.main_fig.add_subplot(3, 3, 9)
         lnstuff = np.log(np.log(P0/res['p_area_ana'])/(1000*1e6*365*24*60*60))
         TP = ((88446)/(19.687-lnstuff)) -273
         self.ax8.plot(points, TP, 'k.')
         self.ax8.set(ylim=(1050, 1350),
                      xlabel='#', ylabel='$\mathregular{T_P (^{\circ}C)}$')
 
-        self.fig.tight_layout(pad=0.7, w_pad=0, h_pad=0)
-        self.canvas.draw()
+        self.main_fig.tight_layout(pad=0.7, w_pad=0, h_pad=0)
+        self.main_canvas.draw()
 
 
-    def plot_map(self):
+    def ask_map(self):
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
                                            title='Select results file',
                                            filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
@@ -459,13 +466,22 @@ class QUIDDITMain(TclWinBase):
         self.plot_seq('zero')
 
 
+    def plot_map(self, data, title, fig, ax, extent, clim):
+        img = self.ax.imshow(data, origin='lower', extent=extent,
+                             cmap=STDCOLS, clim=clim)
+        divider = make_axes_locatable(self.ax)
+        cax = divider.append_axes("right", size="5%", pad=0.3)
+        self.cbar = fig.colorbar(img, cax=cax)
+        fig.suptitle(title)
+
+
     def plot_seq(self, seq):
         """plots spectra within a sequence.
         plotmode=='single': plot single spectrum
         plotmode=='review': plot spectrum and review elements
         plotmode=='map': plot maps
         """
-        self.clear_plot(self.fig)
+        self.clear_plot(self.main_fig)
 
         self.Next_button['state'] = 'normal'
         self.Back_button['state'] = 'normal'
@@ -484,16 +500,16 @@ class QUIDDITMain(TclWinBase):
                 self.index += 1
 
         if self.plotmode.get() == 'single':
-            self.ax = self.fig.add_subplot(1, 1, 1)
+            self.ax = self.main_fig.add_subplot(1, 1, 1)
             self.plot_spec((self.selected_items[self.index]),
-                           self.fig, self.ax)
+                           self.main_fig, self.ax)
 
         elif self.plotmode.get() == 'review':
-            self.fig.suptitle('Review')
+            self.main_fig.suptitle('Review')
             for i in range(3):
-                self.ax = self.fig.add_subplot(3, 1, i+1)
+                self.ax = self.main_fig.add_subplot(3, 1, i+1)
                 self.plot_spec(self.selected_items[self.index],
-                               self.fig, self.ax, xlabel='')
+                               self.main_fig, self.ax, xlabel='')
                 rev = self.read_review(self.review_path, self.index)
                 spec = np.loadtxt(self.selected_items[self.index], delimiter=',')
 
@@ -579,12 +595,12 @@ class QUIDDITMain(TclWinBase):
                 x.append(float(xy.split(' ')[0][2:]))
                 y.append(float(xy.split(' ')[1][1:-5]))
 
-            extent = (min(x), max(x), min(y), max(y))
+            self.extent = (min(x), max(x), min(y), max(y))
             resolution = 2000j
-            cols = cm.jet
+            
 
-            grid_x, grid_y = np.mgrid[extent[0]:extent[1]:resolution,
-                                      extent[2]:extent[3]:resolution]
+            grid_x, grid_y = np.mgrid[self.extent[0]:self.extent[1]:resolution,
+                                      self.extent[2]:self.extent[3]:resolution]
 
             maps = {'$[N_T]$ (ppm)': res['[NT]'],
                     '$[N_A]$ (ppm)': res['[NA]'],
@@ -609,6 +625,7 @@ class QUIDDITMain(TclWinBase):
                      'I(3107) $(cm^{-2})$': (None, None)}
 
             plots = self.selected_items
+            clim = clims[plots[self.index]]
 
             self.plot_item = maps[plots[self.index]]
             self.map_title = plots[self.index]
@@ -616,19 +633,15 @@ class QUIDDITMain(TclWinBase):
             if plots[self.index] == '$[N_B]/[N_T]$':
                 self.ax.set()
 
-            map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, self.plot_item)
-            self.fig.suptitle(self.map_title)
-            self.ax = self.fig.add_subplot(1, 1, 1)
-            img = self.ax.imshow(map_grid, origin='lower', extent=extent,
-                                 cmap=cols, clim=clims[plots[self.index]])
-            divider = make_axes_locatable(self.ax)
-            cax = divider.append_axes("right", size="5%", pad=0.3)
-            self.cbar = self.fig.colorbar(img, cax=cax)
+            self.map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, self.plot_item)
+            self.ax = self.main_fig.add_subplot(1, 1, 1)
+            self.plot_map(self.map_grid, self.map_title, self.main_fig, self.ax, self.extent, clim)
+
 
         else:
             self.print_message(self.message, 'Error: Unknown plotmode.')
 
-        self.canvas.draw()
+        self.main_canvas.draw()
 
 
     def plot_spec(self, file, fig, ax,
@@ -747,6 +760,12 @@ class QUIDDITMain(TclWinBase):
         return row
 
 
+    def redo_map(self, data, title, canvas, fig, ax, extent):
+        clim=(self.minvar.get(), self.maxvar.get())
+        self.plot_map(data, title, fig, ax, extent, clim)
+        canvas.draw()
+
+
     def restore_Ndefault(self):
         """Restore default selection of end-members for N fitting
         """
@@ -786,6 +805,12 @@ class QUIDDITMain(TclWinBase):
         #self.selected_files = self.getvar('')
         #self.selected_items = self.getvar('')
         self.plotmode = self.getvar('')
+        #self.minvar = self.getvar(None)
+        #self.maxvar = self.getvar(None)
+        self.minvar = self.getvar(0.)
+        #self.minvar = tk.DoubleVar()
+        #self.maxvar = tk.DoubleVar()
+        self.maxvar = self.getvar(1.)
 
 
     def settings(self):
@@ -854,7 +879,7 @@ class QUIDDITToplevel(tk.Toplevel, TclWinBase):
         super().__init__()
         self.toplevel = tk.Toplevel()
         #self.toplevel.title(title)
-        self.protocol("WM_DELETE_WINDOW", self.toplevel.destroy)
+        self.toplevel.protocol("WM_DELETE_WINDOW", self.toplevel.destroy)
 
 
 class LoadingFrame(tk.Frame):
