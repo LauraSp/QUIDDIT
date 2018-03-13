@@ -3,6 +3,8 @@ Quantification of Infrared active Defects in Diamond and Inferred Temperatures
 
 license: 
 
+All parts of QUIDDIT can be downloaded and used without charge but may not be modified.
+
 ## Download
 All necessary files can be downloaded by visiting the following website:
 https://github.com/LauraSp/QUIDDIT
@@ -34,7 +36,15 @@ C:\FTIR
 ### Running QUIDDIT
 To run QUIDDIT, open your python IDE of choice and find and run the "QUIDDIT GUI" file in the downloaded repository (you may need to unzip the files first). The GUI can also be run using IDLE (a very basic standard Python IDE) or from the command line.
 
+## Known Bugs and Issues
+This section provides an overview over known issues with QUIDDIT in order of priority. The author is working on resolving them but no guarantee can be given at what point they will be fixed.
+
+* Issues in fitting the platelet peak area (fit overestimates height of the 1405 cm-1 peak)
+* Results of spectra that contain the C-centre currently can't be plotted
+* When plotting map data, "Redo map" button in "Histogram" window only works the second time it is clicked
+* Empty, additional pop-up window prompted with "Settings" and "User Input" (in data processing)
 
 ## Contact:
 For further questions or suggestions, please contact
-Laura Speich laura.speich@bristol.ac.uk
+
+Laura Speich: laura.speich@bristol.ac.uk
