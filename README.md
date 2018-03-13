@@ -7,7 +7,7 @@ license:
 All necessary files can be downloaded by visiting the following website:
 https://github.com/LauraSp/QUIDDIT
 
-A full manual is available at this address as well.
+This includes commented Jupyter Notebooks documenting the baseline correction and main data processing (see https://jupyter.org/ for instructions on how to use Jupyter Notebook). A full manual of QUIDDIT is available in the QUIDDIT GitHub repository as well.
 
 ## Installation instructions
 ### Install Python
