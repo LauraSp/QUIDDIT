@@ -19,6 +19,7 @@ I recommend installing an integrated development environment (IDE) that includes
 * matplotlib
 * Tkinter
 * webbrowser
+
 All of these are part of the most common IDE for Python. The instructions in the manual were created for use with Spyder (which is part of the Anaconda package), so I recommend installing Anaconda and running scripts with Spyder for users not familiar with coding.
 
 To install Anaconda, visit
