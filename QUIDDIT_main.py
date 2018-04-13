@@ -11,13 +11,16 @@
 ###############################################################################
 ####################### IMPORTING REQUIRED MODULES ############################
  
-import QUIDDIT_utility as utility
+#import QUIDDIT_utility as utility
 import QUIDDIT_settings as settings
 import numpy as np
 import sys
 import scipy.optimize as op
 from scipy import integrate
 from scipy import stats
+
+import QUIDDIT_utility as utility
+import QUIDDIT_settings as settings
        
 ###############################################################################
 ########################### INPUT & DATA ######################################
@@ -107,16 +110,16 @@ def main(arg1, arg2, arg3):
     print('fitting pseudovoigt function to platelet peak...')  
     pp = utility.spectrum_slice(spectrum, 1327, 1420)         # extract area around pp
     pp2 = utility.spectrum_slice(spectrum, 1350, 1380)
-    
-    #p_s2n = stats.signaltonoise(pp[:,1])
-    
-    pp_wav_inter = np.arange(pp[0][0], pp[-1][0], 0.01)
+        
+    #pp_wav_inter = np.arange(pp[0][0], pp[-1][0], 0.01)
+    pp_wav_inter = np.arange(pp[0][0], pp[-1][0], 0.1)
+
     pp_inter = utility.inter(pp, pp_wav_inter)
 
 # calculations for bounds
     I1405 = 0.257 * H_res.x[1]      #from empirical analysis on platelet degraded spectra 
-    H_lb = I1405 - .1*I1405
-    H_ub = I1405 + .1*I1405
+    H_lb = I1405 * 0.8
+    H_ub = I1405 * 1.2
 
     I1332 = utility.height(1332, pp)
     if I1332 <= 0:
@@ -158,24 +161,7 @@ def main(arg1, arg2, arg3):
     
     #if pp_res.success == True and pp_res.x[1]>=1:
     if pp_res.x[1]>0:
-        p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, B_x0, B_I, B_HWHM_l, B_HWHM_r, B_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHM_r, H1405_sigma, psv_c = pp_res.x
-        #p_x0.append(pp_res.x[0])
-        #p_I.append(pp_res.x[1])
-        #p_HWHM_l.append(pp_res.x[2])
-        #p_HWHM_r.append(pp_res.x[3])
-        #p_sigma.append(pp_res.x[4])
-        #B_x0.append(pp_res.x[5])
-        #B_I.append(pp_res.x[6])
-        #B_HWHM_l.append(pp_res.x[7])
-        #B_HWHM_r.append(pp_res.x[8])
-        #B_sigma.append(pp_res.x[9])
-        #H1405_x0.append(pp_res.x[10])
-        #H1405_I.append(pp_res.x[11])
-        #H1405_HWHM_l.append(pp_res.x[12])
-        #H1405_HWHM_r.append(pp_res.x[13])
-        #H1405_sigma.append(pp_res.x[14])
-        #psv_c.append(pp_res.x[15])
-        
+        p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHM_r, H1405_sigma, B_x0, B_I, B_HWHM_l, B_HWHM_r, B_sigma, psv_c = pp_res.x       
         
         # calculate peak area in different ways:
         print('calculating peak area and peak symmetry...')
@@ -396,10 +382,7 @@ def main(arg1, arg2, arg3):
 ##################### WRITE TO RESULTS FILE ###################################
 																																									
     print('saving results to file...')
-    #res_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, avg, area_num_data, area_num_fit, area_ana, As, Tf, beta, phi, pp_sumsqu, p_s2n, c, a, b, d, const, [NA], [NB], [Nt], perc_IaB, Woods, T, N_sumsqu, I_3107, H_area_num_data, H_area_num_fit, H_area_ana'
-          
-# write all results to structured arrays and store them as csv-files:                          
-    
+              
     results['name'] = filename
 
     results['p_x0'] = p_x0
@@ -440,16 +423,19 @@ def main(arg1, arg2, arg3):
     review['p_HWHM_l'] = p_HWHM_l
     review['p_HWHM_r'] = p_HWHM_r
     review['p_sigma'] = p_sigma
-    review['B_x0'] = B_x0
-    review['B_I'] = B_I
-    review['B_HWHM_l'] = B_HWHM_l
-    review['B_HWHM_r'] = B_HWHM_r
-    review['B_sigma'] = B_sigma
+    
     review['H1405_x0'] = H1405_x0
     review['H1405_I'] = H1405_I
     review['H1405_HWHM_l'] = H1405_HWHM_l
     review['H1405_HWHM_r'] = H1405_HWHM_r
     review['H1405_sigma'] = H1405_sigma
+    
+    review['B_x0'] = B_x0
+    review['B_I'] = B_I
+    review['B_HWHM_l'] = B_HWHM_l
+    review['B_HWHM_r'] = B_HWHM_r
+    review['B_sigma'] = B_sigma
+    
     review['psv_c'] = psv_c
     review['avg'] = avg
 
@@ -470,7 +456,7 @@ def main(arg1, arg2, arg3):
     review['H_HWHM_r'] = H_HWHM_r
     review['H_sigma'] = H_sigma
 
-    review['path'] = filename                         
+    review['path'] = filename                      
 
     return results, review             
                     
@@ -478,13 +464,6 @@ def main(arg1, arg2, arg3):
 ###############################################################################
 ############################## OVERALL PLOTTING ###############################
 
-#ax=plt.gca()
-#ax.invert_xaxis()
-#plt.title(sample)
-#plt.legend(loc='best')
-#plt.xlabel(r'$\mathrm{\mathsf{wavenumber\/[cm^{-1}]}}$')
-#plt.ylabel(r'$\mathrm{\mathsf{absorption\/[cm^{-1}]}}$')
-#plt.show()
 
 if __name__ == "__main__":
     main(sys.argv[0], sys.argv[1], sys.argv[2])

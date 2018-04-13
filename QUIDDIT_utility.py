@@ -14,8 +14,6 @@ import scipy.optimize as op
 from scipy import interpolate
 from scipy import integrate
 from scipy import stats
-import timeit
-import winsound
 #import matplotlib as mpl
 
 ##############################################################################
@@ -52,7 +50,7 @@ def height(wavenum, spectrum):
     I = spectrum[mindiff,1]
     return float(I)
  
-def peak_area(x0,I,HWHM_l,HWHM_r,sigma):
+def peak_area(I, HWHM_l, HWHM_r, sigma):
     return I*(HWHM_l+HWHM_r)*(sigma*(np.pi/2)+(1-sigma)*np.sqrt(np.pi/2))
             
 def lorentzian(x, x0, I, HWHM_l, HWHM_r):
@@ -200,10 +198,10 @@ res_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, avg, area_num_data, 
 
                     
 review_dtype=np.dtype([('name','S100'), ('p_x0','float64'),('p_I','float64'), ('p_HWHM_l','float64'),('p_HWHM_r','float64'),('p_sigma','float64'),
-    ('H1405_x0', 'float64'), ('H1405_I', 'float64'), ('H1405_HWHM_l','float64'), ('H1405_HWHM_r','float64'), ('H1405_sigma','float64'),
-    ('B_x0','float64'), ('B_I', 'float64'), ('B_HWHM_l','float64'), ('B_HWHM_r','float64'), ('B_sigma','float64'), ('psv_c','float64'), ('p_s2n','float64'),
-    ('avg','float64'), ('c','float64'),('a','float64'), ('x', 'float64'), ('b','float64'), ('d', 'float64'), ('N_poly', 'float64'), 
-    ('H_bg_a','float64'),('H_bg_b','float64'), ('H_bg_c','float64'),('H_bg_d','float64'), ('H_pos','float64'),('H_I','float64'), 
-    ('H_HWHM_l','float64'),('H_HWHM_r','float64'),('H_sigma','float64') , ('path', 'S100')])
+                       ('H1405_x0', 'float64'), ('H1405_I', 'float64'), ('H1405_HWHM_l','float64'), ('H1405_HWHM_r','float64'), ('H1405_sigma','float64'),
+                       ('B_x0','float64'), ('B_I', 'float64'), ('B_HWHM_l','float64'), ('B_HWHM_r','float64'), ('B_sigma','float64'), ('psv_c','float64'), ('p_s2n','float64'),
+                       ('avg','float64'), ('c','float64'),('a','float64'), ('x', 'float64'), ('b','float64'), ('d', 'float64'), ('N_poly', 'float64'), 
+                       ('H_bg_a','float64'),('H_bg_b','float64'), ('H_bg_c','float64'),('H_bg_d','float64'), ('H_pos','float64'),('H_I','float64'), 
+                       ('H_HWHM_l','float64'),('H_HWHM_r','float64'),('H_sigma','float64') , ('path', 'S100')])
     
 rev_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHWM_r, p_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHWM_r, H1405_sigma, B_x0, p_I, B_HWHM_l, B_HWHWM_r, B_sigma, p_s2n, psv_c, avg, c, a, x, b, d, const, H_bg_a, H_bg_b, H_bg_c, H_bg_d, H_pos, H_I, H_HWHM_l, H_HWHM_r, H_sigma, path'

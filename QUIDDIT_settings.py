@@ -4,7 +4,7 @@ Created on Mon Sep 04 16:10:39 2017
 This file contains a number of settings used across QUIDDIT
 @author: ls13943
 """
-
+import os
 import numpy as np
 import matplotlib as mpl
 
@@ -12,10 +12,13 @@ home = 'C:\FTIR'
 version='2.0'
 
 # path to type IIa spectum (CSV)
-IIa_path = 'C:\FTIR/typeIIa.csv'
+#IIa_path = 'C:\FTIR/typeIIa.csv'
+IIa_path = os.getcwd() + '/typeIIa.csv'
+
 
 #path to file with standard spectra of N components (CSV)
-std = np.loadtxt('C:\FTIR/CAXBD.csv', delimiter = ',')     # read CAXBD spectra
+std_path = os.getcwd() + '/CAXBD.csv'
+std = np.loadtxt(std_path, delimiter = ',')     # read CAXBD spectra
 
 #standard first guess for platelet fit (p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, 
 #H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHM_r, H1405_sigma, 
