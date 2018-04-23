@@ -141,18 +141,24 @@ def ABD_fit(a, b, d, poly1, A, B, D):
 
 def CAXBD(factors, components):
     """returns sum of A, B and D spectra weighted by a, b and d"""
+    print('factors: {}'.format(factors))
+    print('components: {}'.format(components))
     factors = np.nan_to_num(factors)
-    #print('I was called with factors {}'.format(np.shape(factors)))
-    #print('I was called with components {}'.format(np.shape(components)))
     model_spec = np.sum(factors[:-1] * components, axis=1) + factors[-1]
     return np.array(model_spec)
     
 def CAXBD_err(factors, components, absorp):
-    #print('I was called with factors {}'.format(np.shape(factors)))
-    #print('I was called with components {}'.format(np.shape(components)))
     model_spec = CAXBD(factors, components)
     residual = absorp - model_spec
     return np.sum(residual**2)   
+
+def Temp_N(t, NT, IaB):
+    """calculate T in celsius using age in seconds, NT and aggregation state"""
+    
+    NA = NT * (1-IaB)
+    T = (-81160/(np.log(((NT/NA)-1)/(t*NT*293608))))
+    return T-273
+    
     
 #def Nd_bound(params):
 #    a, b, d, poly1 = params
@@ -204,4 +210,4 @@ review_dtype=np.dtype([('name','S100'), ('p_x0','float64'),('p_I','float64'), ('
                        ('H_bg_a','float64'),('H_bg_b','float64'), ('H_bg_c','float64'),('H_bg_d','float64'), ('H_pos','float64'),('H_I','float64'), 
                        ('H_HWHM_l','float64'),('H_HWHM_r','float64'),('H_sigma','float64') , ('path', 'S100')])
     
-rev_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHWM_r, p_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHWM_r, H1405_sigma, B_x0, p_I, B_HWHM_l, B_HWHWM_r, B_sigma, p_s2n, psv_c, avg, c, a, x, b, d, const, H_bg_a, H_bg_b, H_bg_c, H_bg_d, H_pos, H_I, H_HWHM_l, H_HWHM_r, H_sigma, path'
+rev_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHWM_r, p_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHWM_r, H1405_sigma, B_x0, p_I, B_HWHM_l, B_HWHWM_r, B_sigma, p_s2n, psv_c, avg, c, a, x, b, d, const, H_bg_a, H_bg_b, H_bg_c, H_bg_d, H_x0, H_I, H_HWHM_l, H_HWHM_r, H_sigma, path'

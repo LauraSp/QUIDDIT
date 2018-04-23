@@ -233,23 +233,7 @@ def main(arg1, arg2, arg3):
         print('no platelet peak found')
         
         
-        p_x0 = p_I = p_HWHM_l = p_HWHM_r = p_sigma = B_x0 = B_I = B_HWHM_l = B_HWHM_r = B_sigma = H1405_x0 = H1405_I = H1405_HWHM_l = H1405_HWHM_r = H1405_sigma = psv_c = np.nan
-        #p_x0.append(np.nan)
-        #p_I.append(np.nan)
-        #p_HWHM_l.append(np.nan)
-        #p_HWHM_r.append(np.nan)
-        #p_sigma.append(np.nan)
-        #B_x0.append(np.nan)
-        #B_I.append(np.nan)
-        #B_HWHM_l.append(np.nan)
-        #B_HWHM_r.append(np.nan)
-        #B_sigma.append(np.nan)
-        #H1405_x0.append(np.nan)
-        #H1405_I.append(np.nan)
-        #H1405_HWHM_l.append(np.nan)
-        #H1405_HWHM_r.append(np.nan)
-        #H1405_sigma.append(np.nan) 
-        #psv_c.append(np.nan)       
+        p_x0 = p_I = p_HWHM_l = p_HWHM_r = p_sigma = B_x0 = B_I = B_HWHM_l = B_HWHM_r = B_sigma = H1405_x0 = H1405_I = H1405_HWHM_l = H1405_HWHM_r = H1405_sigma = psv_c = np.nan       
         
         p_area_numerical_data = p_area_numerical_fit = p_area_analytical = asymmetry_factor = tailing_factor = integral_breadth = form_factor = avg = np.nan                                           
 

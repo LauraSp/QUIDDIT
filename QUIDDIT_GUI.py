@@ -25,15 +25,12 @@ import matplotlib.image as mpimg
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import Slider
 from matplotlib.widgets import Button as mplButton
-matplotlib.use('TkAgg')
-
 
 from tclwinbase_QUIDDITversion import *
 import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
-import QUIDDIT_peakfit_widget2 as p_widget
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'

@@ -8,7 +8,7 @@ import os
 import numpy as np
 import matplotlib as mpl
 
-home = 'C:\FTIR'
+home = os.getcwd()
 version='2.0'
 
 # path to type IIa spectum (CSV)
@@ -29,7 +29,7 @@ pp_res_prev = (1370, 0, 5, 5, 1,
                1332, 0, 5, 5, 0, 
                1)
 
-N_comp = (0, 1, 0, 1, 1, 1)
+N_comp = np.array((0, 1, 0, 1, 1, 1))
 
 #pp_res_prev = (1365, 1.2, 3, 3, 1, 
 #               1405, 0, 5, 5, 1, 
