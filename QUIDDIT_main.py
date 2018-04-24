@@ -72,10 +72,7 @@ def main(arg1, arg2, arg3):
     spec_new = np.column_stack((H_wav_new, H_absorp_new))
     
     H_bg_a, H_bg_b, H_bg_c, H_bg_d = H_p_bg
-    #H_bg_a = H_p_bg[0]
-    #H_bg_b = H_p_bg[1] 
-    #H_bg_c = H_p_bg[2]
-    #H_bg_d = H_p_bg[3]    
+   
 
 # fit Pseudovoigt function to 3107 cm-1 H peak:       
     H_x0 = (3107, 0, 1, 1, 0.5) #first guess for x0, I, HWHM_left and HWHM_right, sigma
@@ -89,11 +86,6 @@ def main(arg1, arg2, arg3):
     H_fit = utility.pseudovoigt_fit(H_wav_new, *H_res.x)
     
     H_pos, H_I, H_HWHM_l, H_HWHM_r, H_sigma = H_res.x
-    #H_pos = H_res.x[0]
-    #H_I = H_res.x[1]
-    #H_HWHM_l.append(H_res.x[2])
-    #H_HWHM_r.append(H_res.x[3])
-    #H_sigma.append(H_res.x[4])
     
 # calculate peak area:
     print('calculating peak area...')          

@@ -18,6 +18,8 @@ import scipy.optimize as op
 import spectral as sp
 import spectral.io.envi as envi
 
+import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import matplotlib.cm as cm
@@ -31,14 +33,15 @@ import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
+import QUIDDIT_peakfit_widget2 as p_widget
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
 STDCOLS = cm.jet
 
-all_toolitems = ('Home', 'Back', 'Forward', None,
-                 'Pan', 'Zoom', 'Subplots', None,
-                 'Save')
+#all_toolitems = ('Home', 'Back', 'Forward', None,
+#                 'Pan', 'Zoom', 'Subplots', None,
+#                 'Save')
 
 
 ###############################################################################
@@ -48,7 +51,7 @@ class QUIDDITMain(TclWinBase):
     """
 
     def make_gui(self, title):
-        """Die GUI im Haupt-Frame aufbauen
+        """
         """
         self.setwintitle(title)
 
@@ -71,9 +74,10 @@ class QUIDDITMain(TclWinBase):
                       'Custom baseline':self.hello}
         self.make_menu(menubar, 'Settings', optmenuopt)
 
-        baselinemenuopt = {'Correct baseline (default)':self.baseline,
-                           'Correct with custom baseline':self.hello,
-                           'Another option':self.hello}
+        #baselinemenuopt = {'Correct baseline (default)':self.baseline,
+        #                   'Correct with custom baseline':self.hello,
+        #                   'Another option':self.hello}
+        baselinemenuopt = {'Correct baseline':self.baseline}
         self.make_menu(menubar, 'Baseline', baselinemenuopt)
 
         procmenuopt = {'Process Data':self.process_data}
@@ -138,13 +142,6 @@ class QUIDDITMain(TclWinBase):
                                            cmd=self.histo_frame,
                                            state='disabled', padx=5, pady=5, sticky='e')
 
-
-        self.stats = self.maketext(lcol=4, lrow=row, erow=row, ecol=4,
-                                   caption='stats: ', height=2, relief=STDRELIEF,
-                                   state='disabled', background=STDBG)
-
-        self.print_message(self.stats, self.file_count.get())
-
         for i in range(row):
             self.rowconfigure(i, weight=1, pad=5)
         self.rowconfigure(row, weight=0, pad=5)
@@ -164,22 +161,31 @@ class QUIDDITMain(TclWinBase):
 
         self.logo_img = tk.PhotoImage(file=r'C:/Users\ls13943\Dropbox\coding\QUIDDIT\QUIDDIT logo.gif')
         self.logo = tk.Label(self.toplevel, image=self.logo_img)
-        self.logo.grid(padx=5, pady=5)
+        self.logo.grid(row=0, column=0, padx=5, pady=5)
 
         about_msg = 'version {}\n(Laura Speich, 10/2017)\n\nlaura.speich@bristol.ac.uk'.format(str(QUIDDITversion))
         msg = tk.Label(self.toplevel, text=about_msg)
-        msg.grid(padx=5, pady=5)
+        msg.grid(row=1, column=0, padx=5, pady=5)
         Dismiss_button = tk.Button(self.toplevel, text='Dismiss',
                                    command=self.toplevel.destroy,
                                    height=1, width=6, default='active')
-        Dismiss_button.grid(padx=5, pady=5)
+        Dismiss_button.grid(row=2, column=0, padx=5, pady=5)
+        
+        #this doesn't seem to work:
+        #for i in range(3):
+        #    self.toplevel.rowconfigure(i, weight=1, pad=5)
+        #self.toplevel.columnconfigure(1, weight=1, pad=5)
+        
+        #self.toplevel.grid_columnconfigure(0, weight=1)
+        #self.toplevel.grid_rowconfigure(0, weight=1)
+        #self.toplevel.resizable(True, True)
 
 
     def baseline(self):
         """Baseline correct data
         """
         self.selected_files = fd.askopenfilenames(parent=self, initialdir=self.home,
-                                                  title='Select CSV files',
+                                                  title='Select spectra (CSV files)',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.file_count.set('{} file(s) selected'.format(len(self.selected_files)))
         if self.selected_files:
@@ -322,7 +328,6 @@ class QUIDDITMain(TclWinBase):
 
     def histo_frame(self):
         row = 0
-
         self.toplevel = QUIDDITToplevel('Histogram')
 
         self.histo_fig = Figure(dpi=100)
@@ -431,30 +436,179 @@ class QUIDDITMain(TclWinBase):
         self.print_message(self.message, 'Welcome to QUIDDIT ver. 2.0\n')
         self.std = settings.std
 
-    def man_N_fit(self):
-        self.print_message(self.message, 'This doesnt seem to do anything. :D')
+    def man_N_fit(self):        
+        self.selected_items = fd.askopenfilename(parent=self, initialdir=self.home,
+                                                 title='Select spectrum (CSV) files to process',
+                                                 filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
+        
+        self.age = tk.simpledialog.askfloat('Manual N aggregation fit', prompt='What is the mantle storage duration (Ma)?', initialvalue=2900.)
+        
+        if self.selected_items:
+            self.clear_plot(self.main_fig)
+            spectrum = np.loadtxt(self.selected_items, delimiter=',')
+            self.ax = self.main_fig.add_subplot(111)
+            self.main_fig.suptitle(self.selected_items.split('/')[-1])
+
+            fit_area = utility.spectrum_slice(spectrum, 1001, 1399)
+            self.wav_new = np.arange(fit_area[0][0], fit_area[-1][0], 0.01)
+            self.fit_area_inter = utility.inter(fit_area, self.wav_new)
+            self.fit_area_inter = self.fit_area_inter.flatten()
+            
+            C = np.column_stack((settings.std[:,0], settings.std[:,1]))
+            A = np.column_stack((settings.std[:,0], settings.std[:,2]))    #generate C, A, X, B and D std
+            X = np.column_stack((settings.std[:,0], settings.std[:,3]))    #spectra from CAXBD file
+            B = np.column_stack((settings.std[:,0], settings.std[:,4]))   
+            D = np.column_stack((settings.std[:,0], settings.std[:,5]))
+
+            C_new = utility.inter(C, self.wav_new)   
+            A_new = utility.inter(A, self.wav_new)
+            X_new = utility.inter(X, self.wav_new)                     # interpolate C, A, X, B and D spectra
+            B_new = utility.inter(B, self.wav_new)
+            D_new = utility.inter(D, self.wav_new)
+            self.all_comp = np.column_stack((C_new, A_new, X_new, B_new, D_new))
+                        
+            if self.N_comp[-1] == 1:
+                polyx0 = fit_area[-1,1]    
+                if polyx0 >0:        
+                    polybounds = (0., polyx0)    
+                else:
+                    polybounds = (polyx0, 0.)
+            else:
+                polyx0 = 0
+                polybounds = (0.,0.)
+            
+            x0 = [i for i,j in zip((.5, .5, .1, .5, 0., -polyx0), self.N_comp) if j==1]
+            bounds =  [i for i,j in zip([(0.,None),(0.,None),(0.,None),(0.,None),(0., None), polybounds], self.N_comp) if j==1]
+            
+            fit_args = self.all_comp[:,np.where(self.N_comp[:-1]==1)[0]]
+            
+            fit_res = op.minimize(utility.CAXBD_err, x0=x0, args=(fit_args, self.fit_area_inter), method='SLSQP', bounds=bounds)
+            print(fit_res)
+            fit = utility.CAXBD(fit_res.x, fit_args)
+
+            self.main_fig.subplots_adjust(left=0.25, bottom=0.4)
+
+            self.ax.plot(fit_area[:,0], fit_area[:,1], 'k.', label='data')
+            self.l, = self.ax.plot(self.wav_new, fit, 'g-')
+            self.l2, = self.ax.plot(self.wav_new, (fit - self.fit_area_inter),'r-')
+            self.ax.axhline(y=0, ls='--')
+
+            axcolor = 'lightgoldenrodyellow'
+            
+            ax_C = self.main_fig.add_axes([0.25, 0.1, 0.65, 0.03], axisbg=axcolor)
+            ax_A = self.main_fig.add_axes([0.25, 0.15, 0.65, 0.03], axisbg=axcolor)
+            ax_X = self.main_fig.add_axes([0.25, 0.2, 0.65, 0.03], axisbg=axcolor)
+            ax_B = self.main_fig.add_axes([0.25, 0.25, 0.65, 0.03], axisbg=axcolor)
+            ax_D = self.main_fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
+            ax_poly1 = self.main_fig.add_axes([0.25, 0.35, 0.65, 0.03], axisbg=axcolor)
+            #axes = [i for i,j in zip((ax_C, ax_A, ax_X, ax_B, ax_D, ax_poly1), self.N_comp) if j==1]
+            axes = (ax_C, ax_A, ax_X, ax_B, ax_D, ax_poly1)
+            
+            #self.s_C = []
+            #self.s_A = []
+            #self.s_X = []
+            #self.s_B = []
+            #self.s_D = []
+            #self.s_poly1 = []
+            #sliders = [i for i,j in zip((self.s_C, self.s_A, self.s_X, self.s_B, self.s_D, self.s_poly1), self.N_comp) if j==1]
+            #sliders_temp = (self.s_C, self.s_A, self.s_X, self.s_B, self.s_D, self.s_poly1)
+            self.sliders = []
+
+            
+            #names = [i for i,j in zip(('C', 'A', 'X', 'B', 'D', 'const.'), self.N_comp) if j==1]
+            limits = {'C':(0,10), 'A':(0,20), 'X':(0,2), 'B':(0,3), 'D':(0,3), 'const.':(1,1)}           
+            
+            
+            i = 0
+            #for yesno, axis, slider, name in zip(self.N_comp, axes, sliders_temp, limits):
+            #    if name == 'const.':
+            #        slider = Slider(axis, name, fit_res.x[3]-5, fit_res.x[3]+5, valinit = fit_res.x[3], valfmt='%1.1f')
+            #    else:
+            #        if yesno == 1:
+            #            slider = Slider(axis, name, limits[name][0]*fit_res.x[i], limits[name][1]*fit_res.x[i], valinit=fit_res.x[i])
+            #            i += 1
+            #        else:
+            #            slider = Slider(axis, name, 0, 5, valinit=0, valfmt='%1.1f')
+            #    sliders.append(slider)    
+                
+            for yesno, axis, name in zip(self.N_comp, axes, limits):
+                if name == 'const.':
+                    slider = Slider(axis, name, fit_res.x[3]-5, fit_res.x[3]+5, valinit = fit_res.x[3], valfmt='%1.1f')
+                else:
+                    if yesno == 1:
+                        slider = Slider(axis, name, limits[name][0]*fit_res.x[i], limits[name][1]*fit_res.x[i], valinit=fit_res.x[i])
+                        i += 1
+                    else:
+                        slider = Slider(axis, name, 0, 5, valinit=0, valfmt='%1.1f')
+                slider.on_changed(self.N_widget_update)
+                self.sliders.append(slider)
+                
+            
+            #if fit_res.x[0] <= 0.01:
+            #    self.s_A = Slider(ax_A, 'A', 0, 1, valinit = fit_res.x[0], valfmt='%1.1f')
+            #else:
+            #    self.s_A = Slider(ax_A, 'A', 0, 20*fit_res.x[0], valinit=fit_res.x[0], valfmt='%1.1f')
+    
+            #if fit_res.x[2] <= 0.01:
+            #    self.s_D = Slider(ax_D, 'D', 0, 1, valinit=fit_res.x[2], valfmt='%1.1f')
+            #else:
+            #    self.s_D = Slider(ax_D, 'D', 0, fit_res.x[2]+2*fit_res.x[2], valinit=fit_res.x[2], valfmt='%1.1f')    
+
+            #if fit_res.x[1] <= 0.1:    
+            #    self.s_B = Slider(ax_B, 'B', 0, 2, valinit=fit_res.x[1], valfmt='%1.1f')
+            #else:
+            #    self.s_B = Slider(ax_B, 'B', 0, fit_res.x[1]+2*fit_res.x[1], valinit=fit_res.x[1], valfmt='%1.1f')
+            
+            C = self.sliders[0].val
+            A = self.sliders[1].val
+            X = self.sliders[2].val
+            B = self.sliders[3].val
+            D = self.sliders[4].val
+            #poly1 = self.sliders[5].val
+            
+            N_c = np.round(C * 25, 1)
+            N_a = np.round(A * 16.5, 1)
+            N_b = np.round(B * 79.4, 1)
+            N_t = N_a + N_b + N_c
+            IaB = np.round(N_b/N_t)
+
+            self.T = np.round(utility.Temp_N(self.age, N_t, N_b/N_t), 0)
+            self.fig_text = self.main_fig.text(0.01, 0.75,
+                                               '[NC]: {}\n[NA]: {}\n[NB]: {}\n%B.: {}\nT: {}C \nmax D: {}'.format(N_c, N_a, N_b, IaB, self.T, np.round(B*0.365, 2)))             
+
+            #self.s_C.on_changed(self.N_widget_update)
+            #self.s_A.on_changed(self.N_widget_update)
+            #self.s_X.on_changed(self.N_widget_update)
+            #self.s_B.on_changed(self.N_widget_update)
+            #self.s_D.on_changed(self.N_widget_update)
+            #self.s_poly1.on_cnaged(self.N_widget_update)
+            self.resetax = self.main_fig.add_axes([0.8, 0.025, 0.1, 0.04])
+
+            self.reset_button = mplButton(self.resetax, 'Reset', color=axcolor, hovercolor='0.975')
+            self.reset_button.on_clicked( lambda event, arg=self.sliders: self.widget_reset(event, arg))
+          
+            
+        
 
     def man_peakfit(self):
+        
         self.selected_items = fd.askopenfilename(parent=self, initialdir=self.home,
-                                                  title='Select spectra (CSV) files to process',
+                                                  title='Select spectrum (CSV) files to process',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.peak = tk.simpledialog.askfloat('Manual peak fit', prompt='Where is your peak located (approx. wavenumber in cm-1)?')
         
         if (self.selected_items and self.peak !=0):
-            #self.man_fig = plt.figure()
-            #self.man_fig.set_canvas(self.main_canvas)
-
+            self.clear_plot(self.main_fig)
             lower_bound = self.peak - 30
             upper_bound = self.peak + 30
             
             spectrum = np.loadtxt(self.selected_items, delimiter=',')
-            self.clear_plot(self.main_fig)
             self.ax = self.main_fig.add_subplot(111)
             self.main_fig.suptitle(self.selected_items.split('/')[-1])
 
             fit_area = utility.spectrum_slice(spectrum, lower_bound, upper_bound)
-            wav_new = np.arange(fit_area[0][0], fit_area[-1][0], 0.01)
-            fit_area_inter = utility.inter(fit_area, wav_new)
+            self.wav_new = np.arange(fit_area[0][0], fit_area[-1][0], 0.01)
+            self.fit_area_inter = utility.inter(fit_area, self.wav_new)
 
             pos_guess = fit_area[:,0][np.argmax(fit_area[:,1])]
             height_guess = fit_area[:,1][np.argmax(fit_area[:,1])]
@@ -464,64 +618,53 @@ class QUIDDITMain(TclWinBase):
 
             x0=[(pos_guess, height_guess*1.2, width_guess_l, width_guess_r, sigma_guess)]   
             bounds = [(pos_guess-3,pos_guess+3),(0.0,None),(0.0, None),(0.0,None), (0,1)]
-            args = (wav_new, fit_area_inter)
+            fit_args = (self.wav_new, self.fit_area_inter)
+
             
             # optimization: 
-            fit_res = op.minimize(utility.pseudovoigt, x0=x0, args=args, method='SLSQP', bounds=bounds)
+            fit_res = op.minimize(utility.pseudovoigt, x0=x0, args=fit_args, method='SLSQP', bounds=bounds)
             
-            fit = utility.pseudovoigt_fit(wav_new, *fit_res.x)
+            fit = utility.pseudovoigt_fit(self.wav_new, *fit_res.x)
 
             self.main_fig.subplots_adjust(left=0.25, bottom=0.4)
 
 
             self.ax.plot(fit_area[:,0], fit_area[:,1], '.', label='data')
-            l, = self.ax.plot(wav_new, fit, 'g-')
-            l2, = self.ax.plot(wav_new, (fit - fit_area_inter),'r-')
+            self.l, = self.ax.plot(self.wav_new, fit, 'g-')
+            self.l2, = self.ax.plot(self.wav_new, (fit - self.fit_area_inter),'r-')
             self.ax.axhline(y=0, ls='--')
 
             axcolor = 'lightgoldenrodyellow'
     
             ax_x0 = self.main_fig.add_axes([0.25, 0.3, 0.65, 0.03], facecolor=axcolor)
-            #ax_x0 = self.ax.axis([0.25, 0.3, 0.65, 0.03], facecolor=axcolor)
-            #ax_x0 = self.ax.axes([0.25, 0.3, 0.65, 0.03], facecolor=axcolor)
             ax_I = self.main_fig.add_axes([0.25, 0.25, 0.65, 0.03], facecolor=axcolor)
             ax_HWHM_l = self.main_fig.add_axes([0.25, 0.2, 0.65, 0.03], facecolor=axcolor)
             ax_HWHM_r = self.main_fig.add_axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
             ax_sigma = self.main_fig.add_axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 
-            s_x0 = Slider(ax_x0, 'peak pos.', pos_guess-3, pos_guess+3, valinit=fit_res.x[0], valfmt='%1.1f')
-            s_I = Slider(ax_I, 'peak height', 0, fit_res.x[1]+fit_res.x[1]*0.25, valinit=fit_res.x[1])
-            s_HWHM_l = Slider(ax_HWHM_l, 'l. half width', 0, fit_res.x[2]*3, valinit=fit_res.x[2])
-            s_HWHM_r = Slider(ax_HWHM_r, 'r. half width', 0, fit_res.x[3]*3, valinit=fit_res.x[3])
-            s_sigma = Slider(ax_sigma, 'Gauss. contr.', 0, 1, valinit = fit_res.x[4])
+            self.s_x0 = Slider(ax_x0, 'peak pos.', pos_guess-3, pos_guess+3, valinit=fit_res.x[0], valfmt='%1.1f')
+            self.s_I = Slider(ax_I, 'peak height', 0, fit_res.x[1]+fit_res.x[1]*0.25, valinit=fit_res.x[1], valfmt='%1.1f')
+            self.s_HWHM_l = Slider(ax_HWHM_l, 'l. half width', 0, fit_res.x[2]*3, valinit=fit_res.x[2], valfmt='%1.1f')
+            self.s_HWHM_r = Slider(ax_HWHM_r, 'r. half width', 0, fit_res.x[3]*3, valinit=fit_res.x[3], valfmt='%1.1f')
+            self.s_sigma = Slider(ax_sigma, 'Gauss. contr.', 0, 1, valinit = fit_res.x[4], valfmt='%1.1f')
 
 
             self.fig_text = self.main_fig.text(0.29, 0.8,
-                                  'Peak area:\n{} cm-2'.format(np.round(utility.peak_area(s_I.val,
-                                               s_HWHM_l.val, s_HWHM_r.val,
-                                               s_sigma.val))))
+                                  'Peak area:\n{} cm-2'.format(np.round(utility.peak_area(self.s_I.val,
+                                               self.s_HWHM_l.val, self.s_HWHM_r.val,
+                                               self.s_sigma.val)), 2))
 
-            s_x0.on_changed(self.widget_update)
-            s_I.on_changed(self.widget_update)
-            s_HWHM_l.on_changed(self.widget_update)
-            s_HWHM_r.on_changed(self.widget_update)
-            s_sigma.on_changed(self.widget_update)
-            resetax = self.main_fig.add_axes([0.8, 0.025, 0.1, 0.04])
-            
-            widget_button = mplButton(resetax, 'Reset', color=axcolor, hovercolor='0.975')
-            
-            
-            sliders = (s_x0, s_I, s_HWHM_l, s_HWHM_r, s_sigma)
-            widget_button.on_clicked(self.widget_reset(sliders))
+            self.s_x0.on_changed(self.p_widget_update)
+            self.s_I.on_changed(self.p_widget_update)
+            self.s_HWHM_l.on_changed(self.p_widget_update)
+            self.s_HWHM_r.on_changed(self.p_widget_update)
+            self.s_sigma.on_changed(self.p_widget_update)
+            self.resetax = self.main_fig.add_axes([0.8, 0.025, 0.1, 0.04])
 
-            
-            #self.peak_toplevel = tk.Toplevel('Manual peak fit')
-            #self.peak_fig = Figure(dpi=100)
-            #self.peak_ax = self.peak_fig.add_subplot(111)
+            self.reset_button = mplButton(self.resetax, 'Reset', color=axcolor, hovercolor='0.975')
 
-            
-            #QUIDDIT_peakfit_widget.main(self.selected_items, self.peak)
-            
+            sliders = (self.s_x0, self.s_I, self.s_HWHM_l, self.s_HWHM_r, self.s_sigma)
+            self.reset_button.on_clicked( lambda event, arg=sliders: self.widget_reset(event, arg))
             
 
     def on_input(self, event):
@@ -627,13 +770,13 @@ class QUIDDITMain(TclWinBase):
 
 
     def plot_map(self, data, title, fig, ax, extent, clim):
-        print('plotting map with clim: {}'.format(clim))
         img = ax.imshow(data, origin='lower', extent=extent,
                              cmap=STDCOLS, clim=clim)
         divider = make_axes_locatable(self.ax)
         cax = divider.append_axes("right", size="5%", pad=0.3)
         self.cbar = fig.colorbar(img, cax=cax)
         fig.suptitle(title)
+        return img
 
 
     def plot_seq(self, seq):
@@ -667,6 +810,7 @@ class QUIDDITMain(TclWinBase):
 
         elif self.plotmode.get() == 'review':
             self.main_fig.suptitle('Review')
+            self.print_message('Starting review.')
             for i in range(3):
                 self.ax = self.main_fig.add_subplot(3, 1, i+1)
                 self.plot_spec(self.selected_items[self.index],
@@ -723,7 +867,7 @@ class QUIDDITMain(TclWinBase):
                     self.print_message(self.message,
                                        'platelet peak position: {0:.2f} cm-1'.format(rev['p_x0']))
                     self.print_message(self.message,
-                                       '3107 peak area: {0:.2f} cm-2'.format(H_peak_area))
+                                       '3107 peak area: {0:.2f} cm-2\n'.format(H_peak_area))
 
                 elif i == 1:
                     self.ax.axhline(y=0, color='0.7', linestyle='--')
@@ -748,6 +892,7 @@ class QUIDDITMain(TclWinBase):
 
 
         elif self.plotmode.get() == 'map':
+            self.print_message('Plotting map. This may take a few seconds...')
             self.Histo_button['state'] = 'normal'
             x = []
             y = []
@@ -928,8 +1073,13 @@ class QUIDDITMain(TclWinBase):
 
 
     def redo_map(self, data, title, canvas, fig, ax, extent):
+        fig.delaxes(ax)
+        ax = fig.add_subplot(111)
         clim=(self.minvar.get(), self.maxvar.get())
-        self.plot_map(data, title, fig, ax, extent, clim)
+        img = self.plot_map(data, title, fig, ax, extent, clim)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.3)
+        self.cbar = fig.colorbar(img, cax=cax)
         canvas.draw()
 
 
@@ -1040,25 +1190,44 @@ class QUIDDITMain(TclWinBase):
         self.restore_Ndefault()
 
         self.main_fig.canvas.draw_idle()
-        self.fig_text.set_text('Peak area:\n{} cm-2'.format(np.round(peak_area(s_I.val, s_HWHM_l.val, s_HWHM_r.val, s_sigma.val))))
 
-    def widget_update(val):
-        pos = s_x0.val
-        I = s_I.val
-        HWHM_l = s_HWHM_l.val
-        HWHM_r = s_HWHM_r.val
-        sigma = s_sigma.val
-        l.set_ydata(pseudovoigt_fit(wav_new, pos, I, HWHM_l, HWHM_r, sigma ))
-        l2.set_ydata(pseudovoigt_fit(wav_new, pos, I, HWHM_l, HWHM_r, sigma )-fit_area_new)
-        #self.main_canvas.draw()
-        self.man_fig.draw_idle()
+
+    def p_widget_update(self, val):
+        pos = self.s_x0.val
+        I = self.s_I.val
+        HWHM_l = self.s_HWHM_l.val
+        HWHM_r = self.s_HWHM_r.val
+        sigma = self.s_sigma.val
+        self.l.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma ))
+        self.l2.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma )-self.fit_area_inter)
+        self.fig_text.set(text='Peak area:\n{} cm-2'.format(np.round(utility.peak_area(I,
+                                           HWHM_l, HWHM_r, sigma)), 2))
         
-    def widget_reset(event, sliders):
+    def N_widget_update(self, val):       
+        C = self.sliders[0].val
+        A = self.sliders[1].val
+        X = self.sliders[2].val
+        B = self.sliders[3].val
+        D = self.sliders[4].val
+        poly1 = self.sliders[5].val
+
+        factors = np.array([C, A, X, B, D, poly1])
+        
+        N_c = np.round(C * 25, 1)
+        N_a = np.round(A * 16.5, 1)
+        N_b = np.round(B * 79.4, 1)
+        N_t = N_a + N_b + N_c
+        IaB = np.round(N_b/N_t)
+        T = np.round(utility.Temp_N(self.age, N_t, N_b/N_t))
+        
+        self.l.set_ydata(utility.CAXBD(factors, self.all_comp))
+        self.l2.set_ydata(utility.CAXBD(factors, self.all_comp)-self.fit_area_inter)
+        self.fig_text.set(text='[NC]: {}\n[NA]: {}\n[NB]: {}\n%B.: {}\nT: {}C \nmax D: {}'.format(N_c, N_a, N_b, IaB, T, np.round(B*0.365, 2)))
+
+        
+    def widget_reset(self, event, sliders):
         for slider in sliders:
             slider.reset()
-        #self.main_canvas.draw()
-
-
 
 
 class QUIDDITToplevel(tk.Toplevel, TclWinBase):
@@ -1067,7 +1236,7 @@ class QUIDDITToplevel(tk.Toplevel, TclWinBase):
     def __init__(self, title):
         super().__init__()
         self.toplevel = tk.Toplevel()
-        #self.toplevel.title(title)
+        self.toplevel.title(title)
         self.toplevel.protocol("WM_DELETE_WINDOW", self.toplevel.destroy)
 
 
