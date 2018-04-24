@@ -6,6 +6,7 @@ Created on Thu Sep 07 12:31:42 2017
 """
 
 import sys
+import os
 import webbrowser
 import tkinter as tk
 import tkinter.filedialog as fd
@@ -245,30 +246,58 @@ class QUIDDITMain(TclWinBase):
     def convert_ENVI(self):
         self.selected_ENVI = fd.askopenfilename(parent=self, initialdir=self.home,
                                                 title='Select ENVI file (.dat) to open')
-        self.selected_hdr = fd.askopenfilename(parent=self, initialdir=self.home,
+        path = os.path.dirname(self.selected_ENVI)
+        self.selected_hdr = fd.askopenfilename(parent=self, initialdir=path,
                                                title='Select header (.hdr) file to open')
-        self.data_spacing = sd.askfloat('Spatial resolution', 
-                                                     prompt='What is the spacing between data points (microns)?')
-        self.target_directory = fd.askdirectory(parent=self, initialdir=self.home,
-                                                title='Select directory for CSV files to be stored.')
+        #self.data_spacing = sd.askfloat('Spatial resolution', 
+        #                                             prompt='What is the spacing between data points (microns)?')
+        self.target_directory = fd.askdirectory(parent=self, initialdir=path,
+                                                title='Select directory for individual spectra to be stored.')
 
-        if (self.selected_ENVI and self.selected_hdr and self.data_spacing and self.target_directory):
-            hdr = open(self.selected_hdr, 'a+')
-            for line in hdr.readlines():
-                if 'byte order' in line:
-                    break
-                else:
-                    if sys.byteorder == 'little':
-                        bo = 0
-                    else:
-                        bo = 1
-                    self.print_message( self.message,
-                                       'Byte order not found.\nAdding byte = {} order to header file'.format(bo))
-                    hdr.write('byte order = {}\n'.format(bo))
-                    hdr.close()
-        
-            envi_img = envi.open('C:\FTIR\Sese K1 58 8.hdr', 'C:\FTIR\Sese K1 58 8.dat').load()
+        #if (self.selected_ENVI and self.selected_hdr and self.data_spacing and self.target_directory):
+        if (self.selected_ENVI and self.selected_hdr and self.target_directory):
+            #hdr = open(self.selected_hdr, 'r+')
+            #hdr.seek(0)
+            
+            with open(self.selected_hdr, 'r+') as hdr:
+                bo_found = any('byte order' in line for line in hdr)
+            if not bo_found:
+                self.print_message(self.message,
+                                       'Byte order not found.')
+                bo = self.ask_byteorder()
+                self.print_message(self.message,
+                                       'Adding byte order = {} to file.'.format(bo))
+
+                hdr = open(self.selected_hdr, 'a+')
+                #hdr.seek(0, os.SEEK_END)
+                hdr.write('byte order = {}\n'.format(bo))
+                hdr.close()
+            
+            
+            
+            #for line in hdr.readlines():
+            #    if 'byte order' in line:
+            #        break
+            #    else:
+                    #if sys.byteorder == 'little':
+                    #    bo = 0
+                    #else:
+                    #    bo = 1
+                    #self.print_message( self.message,
+                                       #'Byte order not found.\nAdding byte = {} order to header file'.format(bo))
+             #       self.print_message( self.message,
+             #                          'Byte order not found.')
+              #      bo = self.ask_byteorder()
+                    
+                    
+               #     hdr = open(self.selected_hdr, 'a+')
+                #    hdr.write('byte order = {}\n'.format(bo))
+                 #   hdr.close()
+            
+            envi_img = envi.open(self.selected_hdr, self.selected_ENVI).load()
             img_data = envi_img.load()
+            xspacing = np.asarray(envi.read_envi_header(self.selected_hdr)['pixel size'], dtype=float)[0]
+            yspacing = np.asarray(envi.read_envi_header(self.selected_hdr)['pixel size'], dtype=float)[1]
             wavenum = np.asarray(envi.read_envi_header(self.selected_hdr)['wavelength'], dtype=float)
         
             rows = np.shape(img_data)[0]
@@ -283,8 +312,10 @@ class QUIDDITMain(TclWinBase):
                 for j in range(columns): 
                     spectrum = np.column_stack((wavenum, img_data[i,j,:].flatten()))
                     self.print_message(self.message, 'Saving spectrum {} of {}.'.format(loading.progress['value']+1, rows*columns))
-                    x = i*self.data_spacing
-                    y = j*self.data_spacing
+                    #x = i*self.data_spacing
+                    #y = j*self.data_spacing
+                    x = i * xspacing
+                    y = j * yspacing
                     fname = 'X{} Y{}.CSV'.format(str(x), str(y))
                     np.savetxt((self.target_directory + '/' + fname), spectrum, delimiter=',')
                     loading.progress['value'] += 1
@@ -299,7 +330,7 @@ class QUIDDITMain(TclWinBase):
         """Open and plot spectrum
         """
         self.selected_items = fd.askopenfilenames(parent=self, initialdir=self.home,
-                                                  title='Select spectra (CSV) files to display',
+                                                  title='Select spectra (CSV) to display',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.print_message(self.message,
                            'Opening the following files:\n')
@@ -553,7 +584,7 @@ class QUIDDITMain(TclWinBase):
     def man_peakfit(self):
         
         self.selected_items = fd.askopenfilename(parent=self, initialdir=self.home,
-                                                  title='Select spectrum (CSV) files to process',
+                                                  title='Select spectrum (CSV) to process',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.peak = tk.simpledialog.askfloat('Manual peak fit', prompt='Where is your peak located (approx. wavenumber in cm-1)?')
         
@@ -607,7 +638,7 @@ class QUIDDITMain(TclWinBase):
             self.s_I = Slider(ax_I, 'peak height', 0, fit_res.x[1]+fit_res.x[1]*0.25, valinit=fit_res.x[1], valfmt='%1.1f')
             self.s_HWHM_l = Slider(ax_HWHM_l, 'l. half width', 0, fit_res.x[2]*3, valinit=fit_res.x[2], valfmt='%1.1f')
             self.s_HWHM_r = Slider(ax_HWHM_r, 'r. half width', 0, fit_res.x[3]*3, valinit=fit_res.x[3], valfmt='%1.1f')
-            self.s_sigma = Slider(ax_sigma, 'Gauss. contr.', 0, 1, valinit = fit_res.x[4], valfmt='%1.1f')
+            self.s_sigma = Slider(ax_sigma, 'Lorentz. contr.', 0, 1, valinit = fit_res.x[4], valfmt='%1.1f')
 
 
             self.fig_text = self.main_fig.text(0.29, 0.8,
@@ -711,6 +742,17 @@ class QUIDDITMain(TclWinBase):
         self.main_fig.tight_layout(pad=0.7, w_pad=0, h_pad=0)
         self.main_canvas.draw()
 
+    def ask_byteorder(self):
+        self.toplevel = tk.Toplevel()
+        self.toplevel.title('Error. Byte order not found.')
+        tk.Label(self.toplevel, text='Was the ENVI file created on Windows or MacOS/Linux?').grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+        byteorder = self.getvar(0)
+        tk.Radiobutton(self.toplevel, text='Windows', variable=byteorder, value=0).grid(row=1, column=0, padx=5, pady=5)
+        tk.Radiobutton(self.toplevel, text='MacOS/Linux', variable=byteorder, value=1).grid(row=1, column=1, padx=5, pady=5)
+        btn = tk.Button(self.toplevel, text='Ok', command=self.toplevel.destroy)
+        btn.grid(row=2, column=0, padx=5, pady=5)
+        self.toplevel.wait_window()
+        return byteorder.get()
 
     def ask_map(self):
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
@@ -939,7 +981,7 @@ class QUIDDITMain(TclWinBase):
         """Process data
         """
         self.selected_items = fd.askopenfilenames(parent=self, initialdir=self.home,
-                                                  title='Select CSV files',
+                                                  title='Select baseline corrected spectra (CSV)',
                                                   filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
         self.input = self.input_frame()
 
