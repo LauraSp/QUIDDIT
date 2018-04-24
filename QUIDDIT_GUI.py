@@ -447,6 +447,7 @@ class QUIDDITMain(TclWinBase):
             self.clear_plot(self.main_fig)
             spectrum = np.loadtxt(self.selected_items, delimiter=',')
             self.ax = self.main_fig.add_subplot(111)
+            self.ax.invert_xaxis()
             self.main_fig.suptitle(self.selected_items.split('/')[-1])
 
             fit_area = utility.spectrum_slice(spectrum, 1001, 1399)
@@ -491,7 +492,7 @@ class QUIDDITMain(TclWinBase):
             self.ax.plot(fit_area[:,0], fit_area[:,1], 'k.', label='data')
             self.l, = self.ax.plot(self.wav_new, fit, 'g-')
             self.l2, = self.ax.plot(self.wav_new, (fit - self.fit_area_inter),'r-')
-            self.ax.axhline(y=0, ls='--')
+            self.ax.axhline(y=0, ls='--', color='k')
 
             axcolor = 'lightgoldenrodyellow'
             
@@ -503,15 +504,7 @@ class QUIDDITMain(TclWinBase):
             ax_poly1 = self.main_fig.add_axes([0.25, 0.35, 0.65, 0.03], axisbg=axcolor)
             #axes = [i for i,j in zip((ax_C, ax_A, ax_X, ax_B, ax_D, ax_poly1), self.N_comp) if j==1]
             axes = (ax_C, ax_A, ax_X, ax_B, ax_D, ax_poly1)
-            
-            #self.s_C = []
-            #self.s_A = []
-            #self.s_X = []
-            #self.s_B = []
-            #self.s_D = []
-            #self.s_poly1 = []
-            #sliders = [i for i,j in zip((self.s_C, self.s_A, self.s_X, self.s_B, self.s_D, self.s_poly1), self.N_comp) if j==1]
-            #sliders_temp = (self.s_C, self.s_A, self.s_X, self.s_B, self.s_D, self.s_poly1)
+
             self.sliders = []
 
             
@@ -520,16 +513,6 @@ class QUIDDITMain(TclWinBase):
             
             
             i = 0
-            #for yesno, axis, slider, name in zip(self.N_comp, axes, sliders_temp, limits):
-            #    if name == 'const.':
-            #        slider = Slider(axis, name, fit_res.x[3]-5, fit_res.x[3]+5, valinit = fit_res.x[3], valfmt='%1.1f')
-            #    else:
-            #        if yesno == 1:
-            #            slider = Slider(axis, name, limits[name][0]*fit_res.x[i], limits[name][1]*fit_res.x[i], valinit=fit_res.x[i])
-            #            i += 1
-            #        else:
-            #            slider = Slider(axis, name, 0, 5, valinit=0, valfmt='%1.1f')
-            #    sliders.append(slider)    
                 
             for yesno, axis, name in zip(self.N_comp, axes, limits):
                 if name == 'const.':
@@ -542,29 +525,12 @@ class QUIDDITMain(TclWinBase):
                         slider = Slider(axis, name, 0, 5, valinit=0, valfmt='%1.1f')
                 slider.on_changed(self.N_widget_update)
                 self.sliders.append(slider)
-                
-            
-            #if fit_res.x[0] <= 0.01:
-            #    self.s_A = Slider(ax_A, 'A', 0, 1, valinit = fit_res.x[0], valfmt='%1.1f')
-            #else:
-            #    self.s_A = Slider(ax_A, 'A', 0, 20*fit_res.x[0], valinit=fit_res.x[0], valfmt='%1.1f')
-    
-            #if fit_res.x[2] <= 0.01:
-            #    self.s_D = Slider(ax_D, 'D', 0, 1, valinit=fit_res.x[2], valfmt='%1.1f')
-            #else:
-            #    self.s_D = Slider(ax_D, 'D', 0, fit_res.x[2]+2*fit_res.x[2], valinit=fit_res.x[2], valfmt='%1.1f')    
-
-            #if fit_res.x[1] <= 0.1:    
-            #    self.s_B = Slider(ax_B, 'B', 0, 2, valinit=fit_res.x[1], valfmt='%1.1f')
-            #else:
-            #    self.s_B = Slider(ax_B, 'B', 0, fit_res.x[1]+2*fit_res.x[1], valinit=fit_res.x[1], valfmt='%1.1f')
             
             C = self.sliders[0].val
             A = self.sliders[1].val
             X = self.sliders[2].val
             B = self.sliders[3].val
             D = self.sliders[4].val
-            #poly1 = self.sliders[5].val
             
             N_c = np.round(C * 25, 1)
             N_a = np.round(A * 16.5, 1)
@@ -572,16 +538,10 @@ class QUIDDITMain(TclWinBase):
             N_t = N_a + N_b + N_c
             IaB = np.round(N_b/N_t)
 
-            self.T = np.round(utility.Temp_N(self.age, N_t, N_b/N_t), 0)
+            self.T = np.round(utility.Temp_N(self.age*1e6*365*24*60*60, N_t, N_b/N_t))
             self.fig_text = self.main_fig.text(0.01, 0.75,
                                                '[NC]: {}\n[NA]: {}\n[NB]: {}\n%B.: {}\nT: {}C \nmax D: {}'.format(N_c, N_a, N_b, IaB, self.T, np.round(B*0.365, 2)))             
 
-            #self.s_C.on_changed(self.N_widget_update)
-            #self.s_A.on_changed(self.N_widget_update)
-            #self.s_X.on_changed(self.N_widget_update)
-            #self.s_B.on_changed(self.N_widget_update)
-            #self.s_D.on_changed(self.N_widget_update)
-            #self.s_poly1.on_cnaged(self.N_widget_update)
             self.resetax = self.main_fig.add_axes([0.8, 0.025, 0.1, 0.04])
 
             self.reset_button = mplButton(self.resetax, 'Reset', color=axcolor, hovercolor='0.975')
@@ -629,10 +589,11 @@ class QUIDDITMain(TclWinBase):
             self.main_fig.subplots_adjust(left=0.25, bottom=0.4)
 
 
-            self.ax.plot(fit_area[:,0], fit_area[:,1], '.', label='data')
+            self.ax.plot(fit_area[:,0], fit_area[:,1], 'k.', label='data')
+            self.ax.invert_xaxis()
             self.l, = self.ax.plot(self.wav_new, fit, 'g-')
             self.l2, = self.ax.plot(self.wav_new, (fit - self.fit_area_inter),'r-')
-            self.ax.axhline(y=0, ls='--')
+            self.ax.axhline(y=0, ls='--', color='k')
 
             axcolor = 'lightgoldenrodyellow'
     
@@ -1218,7 +1179,7 @@ class QUIDDITMain(TclWinBase):
         N_b = np.round(B * 79.4, 1)
         N_t = N_a + N_b + N_c
         IaB = np.round(N_b/N_t)
-        T = np.round(utility.Temp_N(self.age, N_t, N_b/N_t))
+        T = np.round(utility.Temp_N(self.age*1e6*365*24*60*60, N_t, N_b/N_t))
         
         self.l.set_ydata(utility.CAXBD(factors, self.all_comp))
         self.l2.set_ydata(utility.CAXBD(factors, self.all_comp)-self.fit_area_inter)
