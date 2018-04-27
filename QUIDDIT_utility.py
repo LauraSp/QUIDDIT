@@ -101,6 +101,16 @@ def pseudovoigt(params, *args):
     
     error = args[1] - psv
     return np.sum(error**2)
+
+def pseudovoigt_const(params, *args):
+    """returns the sum of (measured-model)**2 using a Pseudovoigt function 
+    P(x) = sigma*L(x) + (1-sigma)*G(x) as model and measured absorptions"""
+    
+    x0, I, HWHM_l, HWHM_r, sigma, const = params      
+    psv = sigma*lorentzian(args[0],x0,I,HWHM_l, HWHM_r) + (1-sigma)*gaussian(args[0],x0,I,HWHM_l,HWHM_r) + const
+    
+    error = args[1] - psv
+    return np.sum(error**2)
     
 def pseudovoigt_fit(x,x0,I,HWHM_l,HWHM_r,sigma):
     """a Pseudovoigt function P(x) = sigma*L(x) + (1-sigma)*G(x)"""
@@ -153,12 +163,26 @@ def CAXBD_err(factors, components, absorp):
     return np.sum(residual**2)   
 
 def Temp_N(t, NT, IaB):
-    """calculate T in celsius using age in seconds, NT and aggregation state"""
-    
+    """calculate T in celsius using age in seconds (t), NT and aggregation state (IaB)"""   
     NA = NT * (1-IaB)
     T = (-81160/(np.log(((NT/NA)-1)/(t*NT*293608))))
     return T-273
-    
+
+
+def aggregate(T1, NT, T2, IaB_measured, t1, t2):
+    """input: NT,t1,t2, measured agg (prop. of B), T2.
+    vary T1, until IaB2 matches IaBt
+    """
+    EaR = 81160
+    preexp = 293608
+    NA0 = NT    #A centres before aggregation starts
+    rate1 = preexp * np.exp(-EaR/(T1+273))
+    NA1 =  NA0/(1+(rate1*NA0)*t1)     #A centres after first stage of annealing
+    rate2 = preexp * np.exp(-EaR/(T2+273))
+    NA2 = NA1/(1+(rate2*NA1)*t2)      #A centres after second stage of annealing
+    IaB_calc = 1-(NA2/NT)
+    error = IaB_measured - IaB_calc
+    return error**2   
     
 #def Nd_bound(params):
 #    a, b, d, poly1 = params
@@ -193,7 +217,7 @@ def make_2dgrid(x, y, grid_x, grid_y, param):
 ###############################################################################
 ######################### QUIDDIT DATA TYPES ##################################
     
-results_dtype=np.dtype([('name', 'S100'),('p_x0','float64'),('p_I','float64'), ('p_HWHM_l','float64'),('p_HWHM_r','float64'),('p_sigma','float64'), 
+results_dtype=np.dtype([('name', '|O8'),('p_x0','float64'),('p_I','float64'), ('p_HWHM_l','float64'),('p_HWHM_r','float64'),('p_sigma','float64'), 
     ('avg','float64'), ('p_area_num_data','float64'), ('p_area_ana','float64'), 
     ('p_As','float64'), ('p_Tf','float64'), ('p_beta','float64'), ('p_phi','float64'), ('p_sumsqu','float64'), 
     ('c','float64'),('a','float64'), ('x', 'float64'), ('b','float64'), ('d', 'float64'), ('N_poly','float64'),

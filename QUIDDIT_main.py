@@ -358,7 +358,11 @@ def main(arg1, arg2, arg3):
 ##################### WRITE TO RESULTS FILE ###################################
 																																									
     print('saving results to file...')
-              
+    
+    #if len(filename)>=100:
+    #    filename = filename[-100:]
+
+        
     results['name'] = filename
 
     results['p_x0'] = p_x0

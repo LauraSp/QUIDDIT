@@ -34,6 +34,7 @@ import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
+import QUIDDIT_peakfit_widget2 as p_widget
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
@@ -94,6 +95,9 @@ class QUIDDITMain(TclWinBase):
         manualmenuopt = {'Fit N region manually': self.man_N_fit,
                          'Fit peak manually': self.man_peakfit}
         self.make_menu(menubar, 'Manual fit', manualmenuopt)
+        
+        manualmenuopt = {'Model N aggregation': self.N_2stage}
+        #self.make_menu(menubar, '2-stage modelling', manualmenuopt)
 
         helpmenuopt = {'Read Manual':(lambda s=self: webbrowser.open(s.github_url)),
                        'About':self.about}
@@ -429,7 +433,7 @@ class QUIDDITMain(TclWinBase):
                                                    caption='Name for review file: ',
                                                    width=24,
                                                    textvariable=self.reviewvar)
-        self.set_entry_text(self.review_name, '[sample name] results')
+        self.set_entry_text(self.review_name, '[sample name] review')
         tk.Label(self.toplevel, text='.csv').grid(row=row, column=2)
 
         row += 1
@@ -454,10 +458,92 @@ class QUIDDITMain(TclWinBase):
 
         self.toplevel.deiconify()
         self.toplevel.wait_window()
+        
+        if self.reviewvar.get() == self.resultvar.get():
+            self.reviewvar = self.getvar(self.reviewvar.get()+'2')
+            self.print_message(self.message, 'Warning: result and review file have the same name. Saving review as {}.'.format(self.reviewvar.get()))
+        
         self.user_inp = (self.namevar.get(), self.resultvar.get(),
                          self.reviewvar.get(), self.agevar.get())
 
         return self.user_inp
+    
+    def twostinput_frame(self):
+        """Create and input frame to retrieve user input
+        """
+        self.toplevel = QUIDDITToplevel('2-stage modelling')
+        self.toplevel.bind('<Return>', self.toplevel.destroy)
+
+        row = 0
+        tk.Label(self.toplevel,
+                 text='Please enter data for core and rim').grid(row=row, column=0, columnspan=3, sticky='w')
+
+        row += 1
+
+        self.age = self.toplevel.makeentry(lrow=row, erow=row,
+                                                   caption='total duration',
+                                                   width=24,
+                                                   textvariable=self.agevar)
+        tk.Label(self.toplevel, text='(Ma)').grid(row=row, column=2)
+
+        row += 1
+        
+        tk.Label(self.toplevel,
+                 text='core:').grid(row=row, column=0, columnspan=3, sticky='w')
+        
+        row += 1
+
+        self.c_NT = self.toplevel.makeentry(erow=row, lrow=row,
+                                                   caption='[NT]: ',
+                                                   width=24,
+                                                   textvariable=self.c_NT_var)
+        tk.Label(self.toplevel, text='ppm').grid(row=row, column=2)
+
+        row += 1
+
+        self.c_agg = self.toplevel.makeentry(erow=row, lrow=row,
+                                                   caption='prop. of B',
+                                                   width=24,
+                                                   textvariable=self.c_agg_var)
+        tk.Label(self.toplevel, text='[-]').grid(row=row, column=2)
+
+        row += 1
+        
+        tk.Label(self.toplevel,
+                 text='rim:').grid(row=row, column=0, columnspan=3, sticky='w')
+        
+        row += 1
+
+        self.r_NT = self.toplevel.makeentry(erow=row, lrow=row,
+                                                   caption='[NT]: ',
+                                                   width=24,
+                                                   textvariable=self.r_NT_var)
+        tk.Label(self.toplevel, text='ppm').grid(row=row, column=2)
+
+        row += 1
+
+        self.r_agg = self.toplevel.makeentry(erow=row, lrow=row,
+                                                   caption='prop. of B',
+                                                   width=24,
+                                                   textvariable=self.r_agg_var)
+        tk.Label(self.toplevel, text='[-]').grid(row=row, column=2)
+
+        row += 1
+
+        row += 1
+        self.toplevel.makebutton(erow=row, ecol=1, cspan=3,
+                                 width=5,
+                                 caption='OK',
+                                 cmd=self.toplevel.destroy,
+                                 sticky=tk.NSEW)
+
+        self.toplevel.deiconify()
+        self.toplevel.wait_window()
+        user_inp = (self.agevar.get(),
+                    self.c_NT_var.get(), self.c_agg_var.get(),
+                    self.r_NT_var.get(), self.r_agg_var.get())
+
+        return user_inp
 
 
     def loaded(self):
@@ -605,16 +691,22 @@ class QUIDDITMain(TclWinBase):
             width_guess_l = 2
             width_guess_r = 2
             sigma_guess = 1
+            const_guess = fit_area[-1,1]
 
-            x0=[(pos_guess, height_guess*1.2, width_guess_l, width_guess_r, sigma_guess)]   
-            bounds = [(pos_guess-3,pos_guess+3),(0.0,None),(0.0, None),(0.0,None), (0,1)]
+            #x0=[(pos_guess, height_guess*1.2, width_guess_l, width_guess_r, sigma_guess)]
+            x0=[(pos_guess, height_guess*1.2, width_guess_l, width_guess_r, sigma_guess, const_guess)]
+            bounds = [(pos_guess-3,pos_guess+3),(0.0,None),(0.0, None),(0.0,None), (0,1), (None,None)]
             fit_args = (self.wav_new, self.fit_area_inter)
 
             
             # optimization: 
-            fit_res = op.minimize(utility.pseudovoigt, x0=x0, args=fit_args, method='SLSQP', bounds=bounds)
+            #fit_res = op.minimize(utility.pseudovoigt, x0=x0, args=fit_args, method='SLSQP', bounds=bounds)
+            fit_res = op.minimize(utility.pseudovoigt_const, x0=x0, args=fit_args, method='SLSQP', bounds=bounds)
+
             
-            fit = utility.pseudovoigt_fit(self.wav_new, *fit_res.x)
+            #fit = utility.pseudovoigt_fit(self.wav_new, *fit_res.x)
+            fit = utility.pseudovoigt_fit(self.wav_new, *fit_res.x[:-1]) + fit_res.x[-1]
+
 
             self.main_fig.subplots_adjust(left=0.25, bottom=0.4)
 
@@ -626,18 +718,21 @@ class QUIDDITMain(TclWinBase):
             self.ax.axhline(y=0, ls='--', color='k')
 
             axcolor = 'lightgoldenrodyellow'
-    
+            
+            ax_const = self.main_fig.add_axes([0.25, 0.35, 0.65, 0.03], facecolor=axcolor)
             ax_x0 = self.main_fig.add_axes([0.25, 0.3, 0.65, 0.03], facecolor=axcolor)
             ax_I = self.main_fig.add_axes([0.25, 0.25, 0.65, 0.03], facecolor=axcolor)
             ax_HWHM_l = self.main_fig.add_axes([0.25, 0.2, 0.65, 0.03], facecolor=axcolor)
             ax_HWHM_r = self.main_fig.add_axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
             ax_sigma = self.main_fig.add_axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+            
 
             self.s_x0 = Slider(ax_x0, 'peak pos.', pos_guess-3, pos_guess+3, valinit=fit_res.x[0], valfmt='%1.1f')
             self.s_I = Slider(ax_I, 'peak height', 0, fit_res.x[1]+fit_res.x[1]*0.25, valinit=fit_res.x[1], valfmt='%1.1f')
             self.s_HWHM_l = Slider(ax_HWHM_l, 'l. half width', 0, fit_res.x[2]*3, valinit=fit_res.x[2], valfmt='%1.1f')
             self.s_HWHM_r = Slider(ax_HWHM_r, 'r. half width', 0, fit_res.x[3]*3, valinit=fit_res.x[3], valfmt='%1.1f')
             self.s_sigma = Slider(ax_sigma, 'Lorentz. contr.', 0, 1, valinit = fit_res.x[4], valfmt='%1.1f')
+            self.s_const = Slider(ax_const, 'const.', fit_res.x[-1]*0.7, fit_res.x[-1]*1.3, valinit = fit_res.x[-1], valfmt='%1.1f')
 
 
             self.fig_text = self.main_fig.text(0.29, 0.8,
@@ -650,13 +745,19 @@ class QUIDDITMain(TclWinBase):
             self.s_HWHM_l.on_changed(self.p_widget_update)
             self.s_HWHM_r.on_changed(self.p_widget_update)
             self.s_sigma.on_changed(self.p_widget_update)
+            self.s_const.on_changed(self.p_widget_update)
             self.resetax = self.main_fig.add_axes([0.8, 0.025, 0.1, 0.04])
 
             self.reset_button = mplButton(self.resetax, 'Reset', color=axcolor, hovercolor='0.975')
 
-            sliders = (self.s_x0, self.s_I, self.s_HWHM_l, self.s_HWHM_r, self.s_sigma)
+            #sliders = (self.s_x0, self.s_I, self.s_HWHM_l, self.s_HWHM_r, self.s_sigma)
+            sliders = (self.s_x0, self.s_I, self.s_HWHM_l, self.s_HWHM_r, self.s_sigma, self.s_const)
             self.reset_button.on_clicked( lambda event, arg=sliders: self.widget_reset(event, arg))
-            
+
+    def N_2stage(self):
+        self.user_inp = self.twostinput_frame()
+        pass
+          
 
     def on_input(self, event):
         """Get sample name and use it to suggest file names
@@ -894,19 +995,21 @@ class QUIDDITMain(TclWinBase):
 
 
         elif self.plotmode.get() == 'map':
-            self.print_message('Plotting map. This may take a few seconds...')
+            self.print_message(self.message, 'Plotting map. This may take a few seconds...')
             self.Histo_button['state'] = 'normal'
             x = []
             y = []
             res = self.read_results(self.res_file)
             for item in res['name']:
-                xy = item.decode().split('/')[-1]
+                #xy = item.decode().split('/')[-1]
+                xy = item.split('/')[-1]
                 x.append(float(xy.split(' ')[0][2:]))
-                y.append(float(xy.split(' ')[1][1:-5]))
+                #y.append(float(os.path.basename((xy.split(' ')[1]))[1:]))
+                y.append(float(xy.split(' ')[1][1:-4]))
 
             self.extent = (min(x), max(x), min(y), max(y))
             resolution = 2000j
-            
+
 
             grid_x, grid_y = np.mgrid[self.extent[0]:self.extent[1]:resolution,
                                       self.extent[2]:self.extent[3]:resolution]
@@ -1043,8 +1146,8 @@ class QUIDDITMain(TclWinBase):
                         rev_fob.write(str(item)+',')
                     rev_fob.write('\n')
 
-                self.results[i] = curr_res
-                self.review[i] = curr_rev
+                #self.results[i] = curr_res
+                #self.review[i] = curr_rev
 
                 loading.progress['value'] += 1
                 #loading.update()
@@ -1200,8 +1303,9 @@ class QUIDDITMain(TclWinBase):
         HWHM_l = self.s_HWHM_l.val
         HWHM_r = self.s_HWHM_r.val
         sigma = self.s_sigma.val
-        self.l.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma ))
-        self.l2.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma )-self.fit_area_inter)
+        const = self.s_const.val
+        self.l.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma )+const)
+        self.l2.set_ydata(utility.pseudovoigt_fit(self.wav_new, pos, I, HWHM_l, HWHM_r, sigma )+const-self.fit_area_inter)
         self.fig_text.set(text='Peak area:\n{} cm-2'.format(np.round(utility.peak_area(I,
                                            HWHM_l, HWHM_r, sigma)), 2))
         
