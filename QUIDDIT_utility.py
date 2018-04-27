@@ -151,8 +151,8 @@ def ABD_fit(a, b, d, poly1, A, B, D):
 
 def CAXBD(factors, components):
     """returns sum of A, B and D spectra weighted by a, b and d"""
-    print('factors: {}'.format(factors))
-    print('components: {}'.format(components))
+    #print('factors: {}'.format(factors))
+    #print('components: {}'.format(components))
     factors = np.nan_to_num(factors)
     model_spec = np.sum(factors[:-1] * components, axis=1) + factors[-1]
     return np.array(model_spec)
