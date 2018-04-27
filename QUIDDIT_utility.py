@@ -227,7 +227,7 @@ results_dtype=np.dtype([('name', '|O8'),('p_x0','float64'),('p_I','float64'), ('
 res_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, avg, area_num_data, area_ana, As, Tf, beta, phi, pp_sumsqu, c, a, x, b, d, const, [NC], [NA], [NB], [Nt], T, N_sumsqu, I_3107, H_area_ana'
 
                     
-review_dtype=np.dtype([('name','S100'), ('p_x0','float64'),('p_I','float64'), ('p_HWHM_l','float64'),('p_HWHM_r','float64'),('p_sigma','float64'),
+review_dtype=np.dtype([('name', '|O8'), ('p_x0','float64'),('p_I','float64'), ('p_HWHM_l','float64'),('p_HWHM_r','float64'),('p_sigma','float64'),
                        ('H1405_x0', 'float64'), ('H1405_I', 'float64'), ('H1405_HWHM_l','float64'), ('H1405_HWHM_r','float64'), ('H1405_sigma','float64'),
                        ('B_x0','float64'), ('B_I', 'float64'), ('B_HWHM_l','float64'), ('B_HWHM_r','float64'), ('B_sigma','float64'), ('psv_c','float64'), ('p_s2n','float64'),
                        ('avg','float64'), ('c','float64'),('a','float64'), ('x', 'float64'), ('b','float64'), ('d', 'float64'), ('N_poly', 'float64'), 
