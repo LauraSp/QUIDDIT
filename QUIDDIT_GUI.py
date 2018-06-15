@@ -16,8 +16,8 @@ import numpy as np
 from scipy import interpolate
 import scipy.optimize as op
 
-import spectral as sp
-import spectral.io.envi as envi
+#import spectral as sp
+#import spectral.io.envi as envi
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -34,7 +34,6 @@ import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
-#import QUIDDIT_peakfit_widget2 as p_widget
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
