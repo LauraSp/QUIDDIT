@@ -1005,7 +1005,7 @@ class QUIDDITMain(TclWinBase):
                 x.append(float(xy.split(' ')[0][2:]))
                 #y.append(float(os.path.basename((xy.split(' ')[1]))[1:]))
                 #y.append(float(xy.split(' ')[1][1:-4]))
-                y.append(float(xy.rstrip().(' ')[1][1:-4]))
+                y.append(float(xy.split(' ')[1].strip(".csv'")[1:]))
 
             self.extent = (min(x), max(x), min(y), max(y))
             resolution = 2000j
