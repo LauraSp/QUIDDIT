@@ -131,6 +131,9 @@ def ultimatepsv_fit(x, p_x0, p_I, p_HWHM_l, p_HWHM_r, p_sigma, H_x0, H_I, H_HWHM
     H_psv = H_sigma*lorentzian(x,H_x0,H_I,H_HWHM_l, H_HWHM_r) + (1-H_sigma)*gaussian(x,H_x0,H_I,H_HWHM_l,H_HWHM_r)
     B_psv = B_sigma*lorentzian(x,B_x0,B_I,B_HWHM_l, B_HWHM_r) + (1-B_sigma)*gaussian(x,B_x0,H_I,B_HWHM_l,B_HWHM_r)
     psv_all = p_psv + H_psv + B_psv + c
+    if psv_all.size == 0:
+        psv_all = np.zeros(len(x))
+        psv_all[:] = np.nan
     return psv_all  
 
 def ABD(params, *args):

@@ -912,7 +912,7 @@ class QUIDDITMain(TclWinBase):
 
         elif self.plotmode.get() == 'review':
             self.main_fig.suptitle('Review')
-            self.print_message('Starting review.')
+            self.print_message(self.message, 'Starting review.')
             for i in range(3):
                 self.ax = self.main_fig.add_subplot(3, 1, i+1)
                 self.plot_spec(self.selected_items[self.index],
