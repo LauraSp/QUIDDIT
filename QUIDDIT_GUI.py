@@ -34,6 +34,7 @@ import QUIDDIT_settings as settings
 import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
+import QUIDDIT_two_stage_model
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
@@ -96,7 +97,7 @@ class QUIDDITMain(TclWinBase):
         self.make_menu(menubar, 'Manual fit', manualmenuopt)
         
         manualmenuopt = {'Model N aggregation': self.N_2stage}
-        #self.make_menu(menubar, '2-stage modelling', manualmenuopt)
+        self.make_menu(menubar, '2-stage modelling', manualmenuopt)
 
         helpmenuopt = {'Read Manual':(lambda s=self: webbrowser.open(s.github_url)),
                        'About':self.about}
@@ -755,8 +756,14 @@ class QUIDDITMain(TclWinBase):
 
     def N_2stage(self):
         self.user_inp = self.twostinput_frame()
-        pass
-          
+        QUIDDIT_two_stage_model.main(self.user_inp[0], self.user_inp[1],
+                                     self.user_inp[2], self.user_inp[3],
+                                     self.user_inp[4])
+        
+        self.clear_plot(self.main_fig)
+        self.plot_2st('output.csv', self.main_fig)
+        self.print_message(self.message, '2-stage modelling:')
+        self.print_message(self.message, 'total duration: %s Ma\ncore [N]t: %s ppm\ncore agg.: %s\nrim [N]t: %s ppm\nrim agg.: %s' %self.user_inp)
 
     def on_input(self, event):
         """Get sample name and use it to suggest file names
@@ -886,6 +893,7 @@ class QUIDDITMain(TclWinBase):
         plotmode=='single': plot single spectrum
         plotmode=='review': plot spectrum and review elements
         plotmode=='map': plot maps
+        plotmode=='2st': plot 2 stage model
         """
         self.clear_plot(self.main_fig)
 
@@ -1003,8 +1011,6 @@ class QUIDDITMain(TclWinBase):
                 #xy = item.decode().split('/')[-1]
                 xy = item.split('/')[-1]
                 x.append(float(xy.split(' ')[0][2:]))
-                #y.append(float(os.path.basename((xy.split(' ')[1]))[1:]))
-                #y.append(float(xy.split(' ')[1][1:-4]))
                 y.append(float(xy.split(' ')[1].strip(".csv'")[1:]))
 
             self.extent = (min(x), max(x), min(y), max(y))
@@ -1047,8 +1053,7 @@ class QUIDDITMain(TclWinBase):
 
             self.map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, self.plot_item)
             self.ax = self.main_fig.add_subplot(1, 1, 1)
-            self.plot_map(self.map_grid, self.map_title, self.main_fig, self.ax, self.extent, clim)
-
+            self.plot_map(self.map_grid, self.map_title, self.main_fig, self.ax, self.extent, clim)                       
 
         else:
             self.print_message(self.message, 'Error: Unknown plotmode.')
@@ -1068,7 +1073,20 @@ class QUIDDITMain(TclWinBase):
                xlabel=xlabel, ylabel=ylabel, **options)
         fig.gca().invert_xaxis()
         fig.suptitle(title)
+        
 
+    def plot_2st(self, file, fig):
+        data = np.loadtxt(file, delimiter=',', skiprows=1)
+        ax = fig.add_subplot(111)
+        ax.plot(data[:,0], data[:,1], 'ro', label='core')
+        ax.plot(data[:,0], data[:,2], 'bo', label='rim')
+        ax.set(ylim=(1100, 1500), xlim=(0, float(self.agevar.get())),
+               xlabel='Duration of first anneal (Ma)',
+               ylabel ='Temperature ($\mathregular{^{\circ}}$C)')
+        ax.legend(loc='best')
+        fig.suptitle('2-stage model')
+        self.main_canvas.draw()
+        
 
     def print_message(self, textwidget, text):
         """print text to textwidget
@@ -1224,6 +1242,10 @@ class QUIDDITMain(TclWinBase):
         self.resultvar = self.getvar('')
         self.reviewvar = self.getvar('')
         self.agevar = self.getvar(2900)
+        self.c_NT_var = self.getvar(0.)
+        self.r_NT_var = self.getvar(0.)
+        self.c_agg_var = self.getvar(0.)
+        self.r_agg_var = self.getvar(0.)
         #self.selected_files = self.getvar('')
         #self.selected_items = self.getvar('')
         self.plotmode = self.getvar('')
