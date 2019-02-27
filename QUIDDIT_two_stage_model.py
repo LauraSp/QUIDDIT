@@ -39,7 +39,12 @@ def temperature(t, NT, IaB):
 ######################### CHANGES THESE VALUES ################################
 def main(arg1, arg2, arg3, arg4, arg5):
 
-    output = 'output.CSV'
+    #output = 'output.CSV'
+    output='two-st_{}Ma_cNT{}_cagg{}_rNT{}_ragg{}.CSV'.format(str(arg1).replace('.', 'pt'),
+            str(arg2).replace('.', 'pt'),
+            str(arg3).replace('.', 'pt'),
+            str(arg4).replace('.', 'pt'),
+            str(arg5).replace('.', 'pt'))
 # total duration in Ma:
 # (both stages together!)
     #age_tot = 530  
