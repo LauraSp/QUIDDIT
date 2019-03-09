@@ -35,6 +35,7 @@ import QUIDDIT_utility as utility
 import QUIDDIT_baseline
 import QUIDDIT_main
 import QUIDDIT_two_stage_model
+import QUIDDIT_peakfit
 
 QUIDDITversion = settings.version
 STDBG = '#ececec'
@@ -81,7 +82,8 @@ class QUIDDITMain(TclWinBase):
         baselinemenuopt = {'Correct baseline':self.baseline}
         self.make_menu(menubar, 'Baseline', baselinemenuopt)
 
-        procmenuopt = {'Process Data':self.process_data}
+        procmenuopt = {'Process Data':self.process_data,
+                       'Peak Fit': self.peak_fit}
         self.make_menu(menubar, 'Process', procmenuopt)
 
         revmenuopt = {'Review fitting':self.review}
@@ -89,7 +91,8 @@ class QUIDDITMain(TclWinBase):
 
         plotmenuopt = {'Plot single spectra':self.file_open,
                        'Plot line data':self.plot_ls,
-                       'Plot map data':self.ask_map}
+                       'Plot map data':self.ask_map,
+                       'Plot histograms': self.plot_histogram}
         self.make_menu(menubar, 'Plot', plotmenuopt)
         
         manualmenuopt = {'Fit N region manually': self.man_N_fit,
@@ -216,7 +219,8 @@ class QUIDDITMain(TclWinBase):
         """
         for ax in fig.get_axes():
             fig.delaxes(ax)
-
+        fig.suptitle('QUIDDIT')
+        
 
     def click_cancel(self):
         """
@@ -410,7 +414,6 @@ class QUIDDITMain(TclWinBase):
                  text="Please enter sample name and mantle storage duration").grid(row=row, column=0, columnspan=3, sticky='w')
 
         row += 1
-
         self.sample_name = self.toplevel.makeentry(lrow=row, erow=row,
                                                    caption="Sample name",
                                                    width=24,
@@ -419,7 +422,6 @@ class QUIDDITMain(TclWinBase):
         self.sample_name.focus_force()
 
         row += 1
-
         self.result_name = self.toplevel.makeentry(erow=row, lrow=row,
                                                    caption='Name for results file: ',
                                                    width=24,
@@ -428,7 +430,6 @@ class QUIDDITMain(TclWinBase):
         tk.Label(self.toplevel, text='.csv').grid(row=row, column=2)
 
         row += 1
-
         self.review_name = self.toplevel.makeentry(erow=row, lrow=row,
                                                    caption='Name for review file: ',
                                                    width=24,
@@ -437,7 +438,6 @@ class QUIDDITMain(TclWinBase):
         tk.Label(self.toplevel, text='.csv').grid(row=row, column=2)
 
         row += 1
-
         self.age = self.toplevel.make_double_entry(erow=row, lrow=row,
                                                    caption='storage duration',
                                                    width=24,
@@ -446,7 +446,6 @@ class QUIDDITMain(TclWinBase):
         tk.Label(self.toplevel, text='(Ma)').grid(row=row, column=2)
 
         row += 1
-
         tk.Label(self.toplevel, text='hint: use <tab> to auto-complete file names').grid(row=row, column=0, columnspan=3, padx=5, pady=5, sticky='nesw')
 
         row += 1
@@ -545,6 +544,56 @@ class QUIDDITMain(TclWinBase):
 
         return user_inp
 
+    def peakfit_inp(self):
+        self.toplevel = QUIDDITToplevel('Peak Fit')
+        self.toplevel.bind('<Return>', self.toplevel.destroy)
+
+        row = 0
+        tk.Label(self.toplevel,
+                 text='Please enter data for peak fitting').grid(row=row, column=0, columnspan=3, sticky='w')
+        
+        row +=1
+        self.sample_name = self.toplevel.makeentry(lrow=row, erow=row,
+                                                   caption="Sample name",
+                                                   width=24,
+                                                   textvariable=self.namevar)
+        self.sample_name.bind('<Tab>', self.on_input2)
+        self.sample_name.focus_force()
+
+        row += 1 
+        self.selected_peak = self.toplevel.makeentry(lrow=row, erow=row,
+                                                   caption='approx. wavenumber',
+                                                   width=24,
+                                                   textvariable=self.peakvar)
+        tk.Label(self.toplevel, text='(cm-1)').grid(row=row, column=2)
+        self.selected_peak.bind('<Tab>', self.on_input2)
+
+        row += 1
+        self.result_name = self.toplevel.makeentry(erow=row, lrow=row,
+                                                   caption='Name for results file: ',
+                                                   width=24,
+                                                   textvariable=self.resultvar)
+        
+        
+        self.set_entry_text(self.result_name, '[sample name] peak fit')
+        tk.Label(self.toplevel, text='.csv').grid(row=row, column=2)
+        
+        row += 1
+        self.toplevel.makebutton(erow=row, ecol=1, cspan=3,
+                                 width=5,
+                                 caption='OK',
+                                 cmd=self.toplevel.destroy,
+                                 sticky=tk.NSEW)
+        
+        self.toplevel.deiconify()
+        self.toplevel.wait_window()
+        user_inp = (self.namevar.get(),
+                    self.peakvar.get(),
+                    self.resultvar.get())
+        
+        return user_inp
+        
+        
 
     def loaded(self):
         """Das Window wurde aufgebaut
@@ -773,6 +822,14 @@ class QUIDDITMain(TclWinBase):
         self.result_name.insert('0', inp+' results')
         self.review_name.delete('0', 'end')
         self.review_name.insert('0', inp+' review')
+        
+    def on_input2(self, event):
+        """Get sample name and use it to suggest file names
+        """
+        name = self.namevar.get()
+        pk = str(self.peakvar.get()).replace('.','pt')
+        self.result_name.delete('0', 'end')
+        self.result_name.insert('0', '{} {} peak fit'. format(name, pk))
 
 
     def plot_ls(self):
@@ -860,6 +917,58 @@ class QUIDDITMain(TclWinBase):
         self.toplevel.wait_window()
         return byteorder.get()
 
+
+    def peak_fit(self):
+        self.input = self.peakfit_inp()
+        
+        if self.input:
+            (name, peak, filename) = self.input
+            resultfile = filename+'.csv'
+            self.selected_items = fd.askopenfilenames(parent=self, initialdir=self.home,
+                                                      title='Select baseline corrected spectra for peak fitting (CSV)',
+                                                      filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
+            self.print_message(self.message, 'Fitting peaks at {} for sample {}\nwriting results to {}.\n'.format(peak, name, resultfile))
+            
+            loading = LoadingFrame(self.master, len(self.selected_items))
+            for file in self.selected_items:
+                if loading.progress['value'] == 0:
+                    with open(resultfile, 'w') as res_fob:
+                        res_fob.write('Peak fitting esults for sample {}'.format(name) + ':\n')
+                        res_fob.write(utility.peakfit_header + '\n')
+
+                self.clear_plot(self.main_fig)
+                self.ax = self.main_fig.add_subplot(111)
+                self.plot_spec(file, self.main_fig, self.ax)
+                self.main_canvas.draw()
+                self.print_message(self.message,
+                                   '\nProcessing file no. {} of {}'.format(str(loading.progress['value']+1),
+                                                        loading.progress['maximum']))
+
+                peakfit_res = QUIDDIT_peakfit.main(file, peak)
+                self.print_message(self.message,
+                                   'Results for this spectrum:')
+                for index, item in enumerate(zip(peakfit_res, utility.peakfit_header.split(','))):
+                    if index == 0:
+                        self.print_message(self.message,
+                                           '{}: {}'.format(item[1], item[0]))
+                    else:
+                        self.print_message(self.message,
+                                           #'{}: {}'.format(item[1], item[0]))
+                                           '{}: {}'.format(item[1], np.round(item[0], 2)))
+
+                with open(resultfile, 'a') as res_fob:
+                    for res in peakfit_res:
+                        res_fob.write(str(res)+',')
+                    res_fob.write('\n')
+
+                loading.progress['value'] += 1
+                self.update()
+
+            loading.destroy()
+            self.print_message(self.message, 'Done.')
+    
+    
+
     def ask_map(self):
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
                                            title='Select results file',
@@ -875,6 +984,35 @@ class QUIDDITMain(TclWinBase):
                                'platelet peak symmetry $(cm^{-1})$',
                                'I(3107) $(cm^{-2})$')
         self.plotmode.set('map')
+        self.plot_seq('zero')
+
+    def plot_histogram(self):
+        self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
+                                           title='Select results file',
+                                           filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
+        self.print_message(self.message, 'Opening file: {}'.format(self.res_file))
+        self.results = np.loadtxt(self.res_file, delimiter=',', dtype=utility.results_dtype, skiprows=2)
+
+        self.bins = sd.askinteger(
+                  "No. of bins",
+                  "Enter ingeter value between 3 and 1000",
+                  initialvalue=200,
+                  minvalue=3,
+                  maxvalue=1000)
+        self.print_message(self.message, 'Creating histograms with {} bins'.format(self.bins))
+        
+        self.selected_items = ('$[N_T]$ (ppm)',
+                               '$[N_A]$ (ppm)',
+                               '$[N_B]$ (ppm)',
+                               '$[N_B]/[N_T]$',
+                               '$T (^{\circ}C)$',
+                               'platelet peak position $(cm^{-1})$',
+                               'platelet peak area $(cm^{-2})$',
+                               'platelet peak width $(cm^{-1})$',
+                               'platelet peak symmetry $(cm^{-1})$',
+                               'I(3107) $(cm^{-2})$')
+        
+        self.plotmode.set('histogram')
         self.plot_seq('zero')
 
 
@@ -893,7 +1031,7 @@ class QUIDDITMain(TclWinBase):
         plotmode=='single': plot single spectrum
         plotmode=='review': plot spectrum and review elements
         plotmode=='map': plot maps
-        plotmode=='2st': plot 2 stage model
+        plotmode=='histogram': plot histograms from results file
         """
         self.clear_plot(self.main_fig)
 
@@ -1031,6 +1169,7 @@ class QUIDDITMain(TclWinBase):
                     'platelet peak symmetry $(cm^{-1})$': (res['p_x0'] - res['avg']),
                     'I(3107) $(cm^{-2})$': res['H_area_ana']}
 
+
             clims = {'$[N_T]$ (ppm)': (None, None),
                      '$[N_A]$ (ppm)': (None, None),
                      '$[N_B]$ (ppm)': (None, None),
@@ -1053,7 +1192,30 @@ class QUIDDITMain(TclWinBase):
 
             self.map_grid = utility.make_2dgrid(x, y, grid_x, grid_y, self.plot_item)
             self.ax = self.main_fig.add_subplot(1, 1, 1)
-            self.plot_map(self.map_grid, self.map_title, self.main_fig, self.ax, self.extent, clim)                       
+            self.plot_map(self.map_grid, self.map_title, self.main_fig, self.ax, self.extent, clim)
+            
+
+        elif self.plotmode.get() == 'histogram':
+            
+            res = self.read_results(self.res_file)
+            histograms = {'$[N_T]$ (ppm)': res['[NT]'],
+                    '$[N_A]$ (ppm)': res['[NA]'],
+                    '$[N_B]$ (ppm)': res['[NB]'],
+                    '$[N_B]/[N_T]$': (res['[NB]']/res['[NT]']),
+                    '$T (^{\circ}C)$': res['T'],
+                    'platelet peak position $(cm^{-1})$': res['p_x0'],
+                    'platelet peak area $(cm^{-2})$': res['p_area_ana'],
+                    'platelet peak width $(cm^{-1})$': (res['p_HWHM_l'] + res['p_HWHM_r']),
+                    'platelet peak symmetry $(cm^{-1})$': (res['p_x0'] - res['avg']),
+                    'I(3107) $(cm^{-2})$': res['H_area_ana']}
+            
+            plots = self.selected_items
+            data = histograms[plots[self.index]]      
+            histogram = data[~np.isnan(data)]
+            
+            self.ax = self.main_fig.add_subplot(1, 1, 1)
+            self.ax.hist(histogram, bins=self.bins)
+            self.ax.set_title(plots[self.index])
 
         else:
             self.print_message(self.message, 'Error: Unknown plotmode.')
@@ -1235,25 +1397,19 @@ class QUIDDITMain(TclWinBase):
         """
         self.home = settings.home
         self.N_comp = settings.N_comp
-        #self.file_count = tk.StringVar(value='')
         self.file_count = self.getvar('')
         self.github_url = 'https://github.com/LauraSp/QUIDDIT'
         self.namevar = self.getvar('')
         self.resultvar = self.getvar('')
         self.reviewvar = self.getvar('')
         self.agevar = self.getvar(2900)
+        self.peakvar = self.getvar(3107.0)
         self.c_NT_var = self.getvar(0.)
         self.r_NT_var = self.getvar(0.)
         self.c_agg_var = self.getvar(0.)
         self.r_agg_var = self.getvar(0.)
-        #self.selected_files = self.getvar('')
-        #self.selected_items = self.getvar('')
         self.plotmode = self.getvar('')
-        #self.minvar = self.getvar(None)
-        #self.maxvar = self.getvar(None)
         self.minvar = self.getvar(0.)
-        #self.minvar = tk.DoubleVar()
-        #self.maxvar = tk.DoubleVar()
         self.maxvar = self.getvar(1.)
         self.peak = self.getvar(0)
 

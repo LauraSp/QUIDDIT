@@ -238,3 +238,9 @@ review_dtype=np.dtype([('name', '|O8'), ('p_x0','float64'),('p_I','float64'), ('
                        ('H_HWHM_l','float64'),('H_HWHM_r','float64'),('H_sigma','float64') , ('path', 'S100')])
     
 rev_header = 'name, p_x0, p_I, p_HWHM_l, p_HWHWM_r, p_sigma, H1405_x0, H1405_I, H1405_HWHM_l, H1405_HWHWM_r, H1405_sigma, B_x0, p_I, B_HWHM_l, B_HWHWM_r, B_sigma, p_s2n, psv_c, avg, c, a, x, b, d, const, H_bg_a, H_bg_b, H_bg_c, H_bg_d, H_x0, H_I, H_HWHM_l, H_HWHM_r, H_sigma, path'
+
+
+peakfit_dtype = np.dtype([('name', '|O8'), ('x0','float64'),('I','float64'), ('HWHM_l','float64'),('HWHM_r','float64'),('sigma','float64'),('area_ana','float64'),
+                         ('bg_a','float64'),('bg_b','float64'), ('bg_c','float64'),('bg_d','float64')])
+    
+peakfit_header = 'name, x0, I, HWHM_l, HWHM_r, sigma, area_ana, bg_a, bg_b, bg_c, bg_d'

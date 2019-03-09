@@ -12,12 +12,11 @@
 ####################### IMPORTING REQUIRED MODULES ############################
  
 #import QUIDDIT_utility as utility
-import QUIDDIT_settings as settings
 import numpy as np
 import sys
 import scipy.optimize as op
 from scipy import integrate
-from scipy import stats
+#from scipy import stats
 
 import QUIDDIT_utility as utility
 import QUIDDIT_settings as settings
