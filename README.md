@@ -1,9 +1,11 @@
 # QUIDDIT
 Quantification of Infrared active Defects in Diamond and Inferred Temperatures
 
-**license:** You are free to download and use QUIDDIT and all its components but not to modify the code.
+**license:** You are free to download and use QUIDDIT and all its components.
 
 ## Download
+Help us by letting us know if you have downloaded QUIDDIT! Even if you don't end up using it, please let us know (you can email laura.speich@bristol.ac.uk). Thank you!
+
 All necessary files can be downloaded by visiting the following website:
 https://github.com/LauraSp/QUIDDIT
 
