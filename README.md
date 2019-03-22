@@ -1,5 +1,5 @@
 # QUIDDIT
-Quantification of Infrared active Defects in Diamond and Inferred Temperatures
+QUantification of Infrared active Defects in Diamond and Inferred Temperatures
 
 **license:** You are free to download and use QUIDDIT and all its components.
 
