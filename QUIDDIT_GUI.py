@@ -92,7 +92,8 @@ class QUIDDITMain(TclWinBase):
         plotmenuopt = {'Plot single spectra':self.file_open,
                        'Plot line data':self.plot_ls,
                        'Plot map data':self.ask_map,
-                       'Plot histograms': self.plot_histogram}
+                       'Plot histograms': self.plot_histogram,
+                       'Quadplot':self.quadplot}
         self.make_menu(menubar, 'Plot', plotmenuopt)
         
         manualmenuopt = {'Fit N region manually': self.man_N_fit,
@@ -593,7 +594,6 @@ class QUIDDITMain(TclWinBase):
         
         return user_inp
         
-        
 
     def loaded(self):
         """Das Window wurde aufgebaut
@@ -808,9 +808,14 @@ class QUIDDITMain(TclWinBase):
         QUIDDIT_two_stage_model.main(self.user_inp[0], self.user_inp[1],
                                      self.user_inp[2], self.user_inp[3],
                                      self.user_inp[4])
+        twost_output='two-st_{}Ma_cNT{}_cagg{}_rNT{}_ragg{}.CSV'.format(str(self.user_inp[0]).replace('.', 'pt'),
+            str(self.user_inp[1]).replace('.', 'pt'),
+            str(self.user_inp[2]).replace('.', 'pt'),
+            str(self.user_inp[3]).replace('.', 'pt'),
+            str(self.user_inp[4]).replace('.', 'pt'))
         
         self.clear_plot(self.main_fig)
-        self.plot_2st('output.csv', self.main_fig)
+        self.plot_2st(twost_output, self.main_fig)
         self.print_message(self.message, '2-stage modelling:')
         self.print_message(self.message, 'total duration: %s Ma\ncore [N]t: %s ppm\ncore agg.: %s\nrim [N]t: %s ppm\nrim agg.: %s' %self.user_inp)
 
@@ -920,7 +925,7 @@ class QUIDDITMain(TclWinBase):
 
     def peak_fit(self):
         self.input = self.peakfit_inp()
-        
+
         if self.input:
             (name, peak, filename) = self.input
             resultfile = filename+'.csv'
@@ -965,9 +970,7 @@ class QUIDDITMain(TclWinBase):
                 self.update()
 
             loading.destroy()
-            self.print_message(self.message, 'Done.')
-    
-    
+            self.print_message(self.message, 'Done.')       
 
     def ask_map(self):
         self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
@@ -1238,10 +1241,11 @@ class QUIDDITMain(TclWinBase):
         
 
     def plot_2st(self, file, fig):
+        self.clear_plot(self.main_fig)
         data = np.loadtxt(file, delimiter=',', skiprows=1)
         ax = fig.add_subplot(111)
-        ax.plot(data[:,0], data[:,1], 'ro', label='core')
-        ax.plot(data[:,0], data[:,2], 'bo', label='rim')
+        ax.plot(data[:,0], data[:,1], 'r.', label='core')
+        ax.plot(data[:,0], data[:,2], 'b.', label='rim')
         ax.set(ylim=(1100, 1500), xlim=(0, float(self.agevar.get())),
                xlabel='Duration of first anneal (Ma)',
                ylabel ='Temperature ($\mathregular{^{\circ}}$C)')
@@ -1342,6 +1346,50 @@ class QUIDDITMain(TclWinBase):
 
         self.set_defaults()
         curr_res, curr_rev = [], []
+     
+            
+    def quadplot(self):
+        self.res_file = fd.askopenfilename(parent=self, initialdir=self.home,
+                                           title='Select results file',
+                                           filetypes=(('CSV', '*.CSV'), ('CSV', '*.csv')))
+        data = self.read_results(self.res_file)
+        qp1_x = np.arange(0, np.max(data['b'])+1)
+        qp1_y = qp1_x * 64.
+        qp2_x = qp3_x = qp4_x = np.arange(1358, 1378)
+        qp2_y = qp2_x * 123.3 - 1678*1e2
+        qp3_y = -0.987 * qp3_x + 1342
+        qp4_y = 0.844 * qp4_x - 1142
+        
+        self.clear_plot(self.main_fig)
+        self.main_fig.suptitle(self.res_file.split('/')[-1][:-4])
+        
+        ax1 = self.main_fig.add_subplot(1,4,1)
+        ax1.plot(data['b'], data['p_area_ana'], 'ko')        
+        ax1.plot(qp1_x, qp1_y, 'k--')
+        ax1.set(xlim=(0,None), ylim=(0,None),
+                xlabel='$\mathregular{\mu_B}$',
+                ylabel="I(B') ($\mathregular{cm^{-2}}$)")
+        
+        ax2 = self.main_fig.add_subplot(1,4,2)
+        ax2.plot(data['p_x0'], data['p_area_ana'], 'ko')
+        ax2.plot(qp2_x, qp2_y, 'k--')
+        ax2.set(xlim=(1358, 1378), xlabel='$\mathregular{x_0 (cm^{-1})}$',
+                ylabel="I(B') ($\mathregular{cm^{-2}}$)")
+        
+        ax3 = self.main_fig.add_subplot(1,4,3)
+        ax3.plot(data['p_x0'], data['p_x0']-data['avg'], 'ko')
+        ax3.plot(qp3_x, qp3_y, 'k--')
+        ax3.set(xlim=(1358, 1378), xlabel='$\mathregular{x_0 (cm^{-1})}$',
+                ylabel='symmetry (cm$^{-1}$)')
+        
+        ax4 = self.main_fig.add_subplot(1,4,4)
+        ax4.plot(data['p_x0'], data['p_HWHM_l']+data['p_HWHM_r'],'ko')
+        ax4.plot(qp4_x, qp4_y, 'k--')
+        ax4.set(xlim=(1358, 1378), xlabel='$\mathregular{x_0 (cm^{-1})}$',
+                ylabel='FWHM (cm$^{-1}$)')
+        
+        self.main_fig.tight_layout()
+        self.main_canvas.draw()
 
 
     def read_results(self, resultfile):

@@ -9,6 +9,7 @@ import sys
 
 import numpy as np
 import scipy.optimize as op
+from scipy import integrate
 
 import QUIDDIT_utility as utility
 
@@ -46,10 +47,12 @@ def main(arg1, arg2):
     (pos, I, HWHM_l, HWHM_r, sigma) = res.x
     area_ana = utility.peak_area(I, HWHM_l, HWHM_r, sigma)
     
+    area_num = integrate.simps(absorp_new)
+    
     for item in zip((pos, I, HWHM_l, HWHM_r, sigma), ('pos','I', 'HWHM_l','HWHM_r','sigma')):
         print(item[1]+': '+str(item[0])+'\n') 
         
-    return (file, pos, I, HWHM_l, HWHM_r, sigma, area_ana, bg_a, bg_b, bg_c, bg_d)
+    return (file, pos, I, HWHM_l, HWHM_r, sigma, area_ana, area_num, bg_a, bg_b, bg_c, bg_d)
 
   
 if __name__ == "__main__":
